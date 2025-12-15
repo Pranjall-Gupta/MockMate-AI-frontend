@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -32,11 +33,13 @@ const Navigation = () => {
           ))}
         </div>
 
-        {/* CTA Button */}
+        {/* CTA Button (Desktop) - FIXED HERE */}
         <div className="hidden md:block">
-          <Button variant="hero" size="sm" className="rounded-full">
-            Start Interview
-          </Button>
+          <Link to="/interview">
+             <Button variant="default" size="sm" className="rounded-full">
+               Start Interview
+             </Button>
+          </Link>
         </div>
 
         {/* Mobile Menu Toggle */}
@@ -62,9 +65,12 @@ const Navigation = () => {
                 {link.name}
               </a>
             ))}
-            <Button variant="hero" className="mt-4 rounded-full">
-              Start Interview
-            </Button>
+            {/* CTA Button (Mobile) - Was already correct, kept it safe */}
+            <Link to="/interview" onClick={() => setIsOpen(false)}>
+              <Button variant="default" className="mt-4 rounded-full w-full">
+                Start Interview
+              </Button>
+            </Link>
           </div>
         </div>
       )}

@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Play } from "lucide-react";
+import { Link } from "react-router-dom";
 import CodeVisual from "./CodeVisual";
 
 const HeroSection = () => {
@@ -53,10 +54,13 @@ const HeroSection = () => {
           className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 opacity-0 animate-fade-in-up"
           style={{ animationDelay: '0.6s' }}
         >
-          <Button variant="hero" size="xl" className="rounded-full group">
-            Start Your Interview
-            <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
-          </Button>
+          <Link to="/interview">
+            <Button variant="hero" size="xl" className="rounded-full group">
+              Start Your Interview
+              <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+            </Button>
+          </Link>
+          
           <Button variant="glass" size="xl" className="rounded-full group">
             <Play className="w-4 h-4" />
             Watch Demo
