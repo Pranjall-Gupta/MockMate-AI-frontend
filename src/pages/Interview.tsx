@@ -1,18 +1,23 @@
 import { useState, useRef } from "react";
 import { Send, Bot, ArrowLeft, Mic, Square } from "lucide-react";
 import { Link } from "react-router-dom";
+import RecordRTC, { StereoAudioRecorder } from "recordrtc"; // <--- IMPORT THIS
+import VoiceMetricsCard, { VoiceMetrics } from "@/components/VoiceMetricsCard";
 
 interface Message {
   type: "user" | "ai";
   content: string;
+  metrics?: VoiceMetrics;
 }
 
 const Interview = () => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+  const [recordingStart, setRecordingStart] = useState<number>(0);
+  
+  // Ref for the Recorder instance
+  const recorderRef = useRef<RecordRTC | null>(null);
 
   const [messages, setMessages] = useState<Message[]>([
     { type: "ai", content: "Hello! I am MockMate. Choose a topic: Java, DSA, or System Design." }
@@ -41,67 +46,103 @@ const Interview = () => {
     }
   };
 
-  // --- VOICE RECORDING START ---
+  // --- VOICE RECORDING START (Using RecordRTC for WAV) ---
   const startRecording = async () => {
     try {
+      setRecordingStart(Date.now());
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      chunksRef.current = [];
 
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
+      // Configure RecordRTC to create a standard WAV file
+      const recorder = new RecordRTC(stream, {
+        type: 'audio',
+        mimeType: 'audio/wav',
+        recorderType: StereoAudioRecorder,
+        numberOfAudioChannels: 1, // Mono is better for speech recognition
+        desiredSampRate: 16000,   // Azure prefers 16kHz
+      });
 
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" });
-        await handleVoiceUpload(audioBlob);
-      };
-
-      mediaRecorder.start();
+      recorder.startRecording();
+      recorderRef.current = recorder;
       setIsRecording(true);
     } catch (err) {
       console.error("Error accessing microphone:", err);
-      alert("Could not access microphone. Please check permissions.");
+      alert("Could not access microphone.");
     }
   };
 
   // --- VOICE RECORDING STOP ---
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
+    if (recorderRef.current && isRecording) {
       setIsRecording(false);
-      // Stop all tracks to release microphone
-      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      
+      recorderRef.current.stopRecording(() => {
+        const audioBlob = recorderRef.current!.getBlob();
+        
+        // Optional: Debug - Play it locally to ensure mic worked
+        // const audio = new Audio(URL.createObjectURL(audioBlob));
+        // audio.play();
+
+        handleVoiceUpload(audioBlob);
+      });
     }
   };
 
   // --- SEND AUDIO TO BACKEND ---
   const handleVoiceUpload = async (audioBlob: Blob) => {
+    const durationSeconds = (Date.now() - recordingStart) / 1000;
+
     setIsLoading(true);
-    // Add a temporary "Uploading audio..." message
-    setMessages(prev => [...prev, { type: "user", content: "🎤 (Audio sent...)" }]);
+    setMessages(prev => [...prev, { type: "user", content: "🎤 (Processing Speech...)" }]);
 
     const formData = new FormData();
-    // Rename file to 'recording.webm' so Java recognizes it
-    formData.append("audio", audioBlob, "recording.webm");
-    formData.append("question", messages[messages.length - 1].content); // Context for AI
-
+    // Use .wav extension now!
+    formData.append("audio", audioBlob, "recording.wav"); 
+    
+    const lastAiMessage = messages.slice().reverse().find(m => m.type === "ai")?.content || "Introduce yourself";
+    formData.append("question", lastAiMessage);
+    formData.append("duration", durationSeconds.toString());
+    
     try {
-      // NOTE: We use the /submit endpoint for Audio
       const response = await fetch("http://localhost:8081/api/interview/submit", {
         method: "POST",
-        body: formData, // No JSON headers for file upload!
+        body: formData,
       });
 
       const data = await response.json();
       
-      // Update the last user message with the actual Transcribed Text
+      // Parse Metrics
+      let finalMetrics: VoiceMetrics | undefined = undefined;
+      if (data.metrics) {
+         try {
+            const aiData = JSON.parse(data.metrics.aiJson);
+            finalMetrics = {
+                wpm: data.metrics.wpm,
+                fillers: data.metrics.fillers,
+                pauseDuration: data.metrics.pauseDuration,
+                tone: aiData.tone || "Neutral",
+                clarityScore: aiData.clarityScore || 0,
+                feedback: aiData.feedback || "No feedback generated."
+            };
+         } catch (e) {
+            console.error("Error parsing AI JSON:", e);
+         }
+      }
+
       setMessages(prev => {
         const newMsgs = [...prev];
         newMsgs[newMsgs.length - 1] = { type: "user", content: "🎤 " + data.transcript };
-        return [...newMsgs, { type: "ai", content: data.feedback }];
+        
+        return [...newMsgs, { 
+            type: "ai", 
+            content: data.feedback,
+            metrics: finalMetrics
+        }];
       });
+
+      if (data.audio) {
+        const audio = new Audio(`data:audio/mp3;base64,${data.audio}`);
+        audio.play();
+      }
 
     } catch (error) {
       console.error(error);
@@ -124,13 +165,20 @@ const Interview = () => {
 
       <main className="flex-1 max-w-4xl w-full mx-auto p-4 flex flex-col gap-4 overflow-y-auto">
         {messages.map((msg, index) => (
-            <div key={index} className={`flex gap-3 ${msg.type === "user" ? "justify-end" : "justify-start"}`}>
-                {msg.type === "ai" && <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center"><Bot size={16} /></div>}
-                <div className={`p-4 rounded-xl max-w-[80%] text-sm leading-relaxed ${
-                    msg.type === "user" ? "bg-white text-black" : "bg-[#1a1a1a] border border-white/10 text-gray-200"
-                }`}>
-                    {msg.content}
+            <div key={index} className={`flex flex-col gap-2 ${msg.type === "user" ? "items-end" : "items-start"}`}>
+                <div className={`flex gap-3 max-w-[85%] ${msg.type === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                    {msg.type === "ai" && <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0"><Bot size={16} /></div>}
+                    <div className={`p-4 rounded-xl text-sm leading-relaxed ${
+                        msg.type === "user" ? "bg-white text-black" : "bg-[#1a1a1a] border border-white/10 text-gray-200"
+                    }`}>
+                        {msg.content}
+                    </div>
                 </div>
+                {msg.metrics && (
+                    <div className="w-full max-w-[85%] ml-11"> 
+                        <VoiceMetricsCard metrics={msg.metrics} />
+                    </div>
+                )}
             </div>
         ))}
         {isLoading && <div className="text-gray-500 text-sm ml-12">Thinking...</div>}
@@ -138,7 +186,6 @@ const Interview = () => {
 
       <div className="p-4 border-t border-white/10 bg-[#0a0a0a]">
         <div className="max-w-4xl mx-auto flex gap-3">
-            {/* RECORD BUTTON */}
             <button 
                 onClick={isRecording ? stopRecording : startRecording}
                 className={`p-3 rounded-full transition-all ${
