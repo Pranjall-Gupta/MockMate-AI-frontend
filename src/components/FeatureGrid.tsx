@@ -1,6 +1,6 @@
 import { Mic, PenTool, Layers, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
-
+import { Database } from "lucide-react";
 const FeatureGrid = () => {
   return (
     <section id="features" className="py-24 px-4">
@@ -89,7 +89,7 @@ const FeatureGrid = () => {
           </Link>
 
           {/* Card 3 - Small */}
-          <div className="bento-card min-h-[180px]">
+          <Link to="/scenarios" className="bento-card min-h-[180px] group cursor-pointer block hover:border-primary/50 transition-all">
             <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
               <Layers className="w-6 h-6 text-primary" strokeWidth={1.5} />
             </div>
@@ -99,20 +99,21 @@ const FeatureGrid = () => {
             <p className="text-muted-foreground text-sm">
               Industry-relevant questions curated by FAANG engineers.
             </p>
-          </div>
+          </Link>
 
-          {/* Card 4 - Small */}
-          <div className="bento-card min-h-[180px]">
+          {/* Card 4 - Small (NEW: SQL Gym) */}
+          <Link to="/sql-detective" className="bento-card min-h-[180px] group cursor-pointer block hover:border-primary/50 transition-all">
             <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-              <Zap className="w-6 h-6 text-primary" strokeWidth={1.5} />
+              <Database className="w-6 h-6 text-primary" strokeWidth={1.5} />
             </div>
             <h3 className="font-serif text-lg font-medium mb-2">
-              Instant Feedback Loop
+              SQL Performance Gym
             </h3>
             <p className="text-muted-foreground text-sm">
-              Receive detailed analysis within seconds of your response.
+              Optimize slow queries, fix indexing, and master schema design.
             </p>
-          </div>
+          </Link>
+          
         </div>
       </div>
     </section>

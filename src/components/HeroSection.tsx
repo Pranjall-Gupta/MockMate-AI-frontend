@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Play } from "lucide-react";
+import { ArrowRight, Flame } from "lucide-react";
 import { Link } from "react-router-dom";
 import CodeVisual from "./CodeVisual";
 
@@ -14,7 +14,7 @@ const HeroSection = () => {
         className="absolute inset-0 opacity-[0.02]"
         style={{
           backgroundImage: `linear-gradient(hsl(var(--border)) 1px, transparent 1px),
-                           linear-gradient(90deg, hsl(var(--border)) 1px, transparent 1px)`,
+                            linear-gradient(90deg, hsl(var(--border)) 1px, transparent 1px)`,
           backgroundSize: '60px 60px'
         }}
       />
@@ -54,6 +54,7 @@ const HeroSection = () => {
           className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 opacity-0 animate-fade-in-up"
           style={{ animationDelay: '0.6s' }}
         >
+          {/* Primary Button */}
           <Link to="/interview">
             <Button variant="hero" size="xl" className="rounded-full group">
               Start Your Interview
@@ -61,10 +62,13 @@ const HeroSection = () => {
             </Button>
           </Link>
           
-          <Button variant="glass" size="xl" className="rounded-full group">
-            <Play className="w-4 h-4" />
-            Watch Demo
-          </Button>
+          {/* Secondary Button: ROAST MY RESUME (Glass + Gold Theme) */}
+          <Link to="/resume">
+             <Button variant="glass" size="xl" className="rounded-full group hover:border-yellow-500/50 hover:bg-yellow-500/5 transition-all">
+                <Flame className="w-5 h-5 text-yellow-500 group-hover:fill-yellow-500/20 transition-colors" />
+                <span className="ml-2 group-hover:text-yellow-500 transition-colors">Roast My Resume</span>
+             </Button>
+          </Link>
         </div>
 
         {/* Floating Code Visual */}
