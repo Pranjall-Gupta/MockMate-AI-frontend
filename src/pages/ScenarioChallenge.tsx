@@ -1,30 +1,30 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Flame, HardHat, Code2, CheckCircle2, RotateCw, Lightbulb, XCircle, AlertTriangle } from "lucide-react";
+import { 
+  ArrowLeft, ArrowRight, Flame, HardHat, Code2, CheckCircle2, 
+  RotateCw, Lightbulb, XCircle, AlertTriangle, Sparkles 
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-// Updated Data Structure
 interface ScenarioData {
   title: string;
   description: string;
   codeSnippet?: string;
   question: string;
   options?: string[]; 
-  correctOption?: string; // The exact string of the correct answer
-  explanation: string;    // The 2-line justification
+  correctOption?: string;
+  explanation: string;
 }
 
 const ScenarioChallenge = () => {
   const [currentRole, setCurrentRole] = useState<string | null>(null);
   const [scenario, setScenario] = useState<ScenarioData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null); // New Error State
-
-  // Quiz State
+  const [error, setError] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
-  const [userAnswer, setUserAnswer] = useState(""); // For Text Input modes
+  const [userAnswer, setUserAnswer] = useState("");
 
-  // 1. GENERATE SCENARIO
   const generateScenario = async (role: string) => {
     setIsLoading(true);
     setError(null);
@@ -40,21 +40,18 @@ const ScenarioChallenge = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role: role }),
       });
-      
+
       if (!response.ok) throw new Error("Server busy");
-      
       const data = await response.json();
       const parsedScenario = JSON.parse(data.scenario);
       setScenario(parsedScenario);
     } catch (err) {
-      console.error(err);
       setError("AI is currently overloaded. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 2. CANCEL INCIDENT (Fixes the overlapping UI issue)
   const handleCancel = () => {
     setCurrentRole(null);
     setScenario(null);
@@ -62,130 +59,233 @@ const ScenarioChallenge = () => {
     setShowResult(false);
   };
 
-  // 3. HANDLE OPTION CLICK (For Multiple Choice)
   const handleOptionClick = (option: string) => {
-    if (showResult) return; // Prevent changing answer
+    if (showResult) return;
     setSelectedOption(option);
     setShowResult(true);
   };
 
-  // 4. THEME HELPER
   const getTheme = () => {
     switch (currentRole) {
-        case "firefighter": return { color: "text-orange-500", border: "border-orange-500/50", bg: "bg-orange-500/10", icon: <Flame /> };
-        case "architect": return { color: "text-blue-500", border: "border-blue-500/50", bg: "bg-blue-500/10", icon: <HardHat /> };
-        case "reviewer": return { color: "text-green-500", border: "border-green-500/50", bg: "bg-green-500/10", icon: <Code2 /> };
-        default: return { color: "text-white", border: "border-white", bg: "bg-gray-800", icon: null };
+        case "firefighter": // BURGUNDY & RUBY
+        return { 
+            color: "text-red-400", 
+            border: "border-red-500/30", 
+            cardBorder: "border-red-500/20",
+            bgGradient: "from-[#1a0505] via-[#050505] to-[#050505]", // Immersive Burgundy
+            cardBg: "bg-red-950/10",
+            glow: "bg-red-600/10", 
+            icon: <Flame className="text-red-500" /> 
+        };
+        case "architect": // NAVY & MIDNIGHT
+        return { 
+            color: "text-blue-400", 
+            border: "border-blue-500/30", 
+            cardBorder: "border-blue-500/20",
+            bgGradient: "from-[#050b1a] via-[#050505] to-[#050505]", // Immersive Navy
+            cardBg: "bg-blue-950/10",
+            glow: "bg-blue-600/10", 
+            icon: <HardHat className="text-blue-500" /> 
+        };
+        case "reviewer": // EMERALD & FOREST
+        return { 
+            color: "text-emerald-400", 
+            border: "border-emerald-500/30", 
+            cardBorder: "border-emerald-500/20",
+            bgGradient: "from-[#051a0b] via-[#050505] to-[#050505]", // Immersive Emerald
+            cardBg: "bg-emerald-950/10",
+            glow: "bg-emerald-600/10", 
+            icon: <Code2 className="text-emerald-500" /> 
+        };
+        default:
+        return { 
+            color: "text-primary", 
+            border: "border-white/10", 
+            cardBorder: "border-white/10",
+            bgGradient: "from-[#050505] via-[#050505] to-[#050505]",
+            cardBg: "bg-white/5",
+            glow: "bg-primary/10", 
+            icon: <Sparkles /> 
+        };
     }
   };
   const theme = getTheme();
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-foreground font-sans p-4 md:p-8 flex flex-col items-center">
+    <div className={`relative min-h-screen transition-colors duration-1000 bg-gradient-to-b ${theme.bgGradient} text-foreground font-sans selection:bg-primary/30 overflow-x-hidden`}>
       
-      {/* HEADER */}
-      <div className="w-full max-w-4xl flex items-center justify-between mb-8">
-        <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-white transition-colors">
-            <ArrowLeft size={16} /> <span className="text-sm font-medium">EXIT</span>
-        </Link>
-        <span className="font-serif text-lg tracking-wide">MOCKMATE SCENARIOS</span>
-      </div>
+      {/* TEXTURE OVERLAY (Mimics high-end paper/fabric) */}
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/asfalt-light.png')]" />
 
-      {/* --- STATE 1: LOBBY (Only show if no role selected) --- */}
-      {!currentRole && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl mt-10 animate-in fade-in">
-            {/* CARDS... (Same as before) */}
-            <button onClick={() => generateScenario("firefighter")} className="group p-8 rounded-2xl bg-[#121212] border border-white/10 hover:border-orange-500/50 hover:bg-orange-500/5 transition-all text-left">
-                <div className="w-14 h-14 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-500 mb-6 group-hover:scale-110 transition-transform">
-                    <Flame size={32} />
-                </div>
-                <h2 className="text-2xl font-bold text-white mb-2">Production Firefighter</h2>
-                <p className="text-gray-400 text-sm leading-relaxed">Disaster has struck. Logs are red. Can you fix the crash?</p>
-            </button>
-            <button onClick={() => generateScenario("architect")} className="group p-8 rounded-2xl bg-[#121212] border border-white/10 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all text-left">
-                <div className="w-14 h-14 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-500 mb-6 group-hover:scale-110 transition-transform">
-                    <HardHat size={32} />
-                </div>
-                <h2 className="text-2xl font-bold text-white mb-2">Cloud Architect</h2>
-                <p className="text-gray-400 text-sm leading-relaxed">Design scalable Azure systems. Balance cost and availability.</p>
-            </button>
-            <button onClick={() => generateScenario("reviewer")} className="group p-8 rounded-2xl bg-[#121212] border border-white/10 hover:border-green-500/50 hover:bg-green-500/5 transition-all text-left">
-                <div className="w-14 h-14 rounded-xl bg-green-500/20 flex items-center justify-center text-green-500 mb-6 group-hover:scale-110 transition-transform">
-                    <Code2 size={32} />
-                </div>
-                <h2 className="text-2xl font-bold text-white mb-2">Code Reviewer</h2>
-                <p className="text-gray-400 text-sm leading-relaxed">Spot hidden bugs in Junior Developer code.</p>
-            </button>
+      <div className="relative z-10 max-w-5xl mx-auto px-4 py-12 flex flex-col items-center">
+        
+        {/* HEADER */}
+        <div className="w-full flex items-center justify-between mb-12 animate-fade-in">
+          <Link to="/" className="group flex items-center gap-3 text-muted-foreground hover:text-white transition-all">
+              <div className="p-2 rounded-full glass border border-white/5 group-hover:bg-white/10">
+                <ArrowLeft size={16} />
+              </div>
+              <span className="text-[9px] font-black tracking-[0.3em] uppercase">Return to Terminal</span>
+          </Link>
+          <div className="flex flex-col items-end">
+            <span className="font-serif text-2xl tracking-tight text-gradient-gold">MOCKMATE</span>
+            <span className="text-[9px] tracking-[0.3em] text-muted-foreground/60 uppercase">Incubation Labs</span>
+          </div>
         </div>
-      )}
 
-      {/* --- STATE 2: LOADING --- */}
-      {isLoading && (
-        <div className="flex flex-col items-center justify-center h-[50vh] animate-pulse">
-             <div className={`w-12 h-12 rounded-full border-4 border-t-transparent ${theme.color.replace('text', 'border')} animate-spin mb-4`}></div>
-             <h2 className="text-xl font-serif">Generating Incident...</h2>
-             <p className="text-gray-500 text-sm">Reviewing system logs...</p>
-        </div>
-      )}
+        {/* --- STATE 1: LOBBY --- */}
+        {!currentRole && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full mt-10">
+            {[
+              { id: "firefighter", title: "Production Firefighter", desc: "Critical systems are failing. Analyze logs and deploy a fix.", icon: <Flame />, color: "hover:border-red-500/40 hover:shadow-red-500/5", bg: "hover:bg-red-500/5" },
+              { id: "architect", title: "Cloud Architect", desc: "Optimize complex deployments for cost and high availability.", icon: <HardHat />, color: "hover:border-blue-500/40 hover:shadow-blue-500/5", bg: "hover:bg-blue-500/5" },
+              { id: "reviewer", title: "Code Reviewer", desc: "Scan logic flows for vulnerabilities and junior dev errors.", icon: <Code2 />, color: "hover:border-emerald-500/40 hover:shadow-emerald-500/5", bg: "hover:bg-emerald-500/5" }
+            ].map((role, i) => (
+              <button 
+                key={role.id}
+                onClick={() => generateScenario(role.id)} 
+                className={`group relative p-8 rounded-[2rem] bg-black/40 backdrop-blur-xl border border-white/5 transition-all duration-500 text-left hover:-translate-y-2 ${role.color} ${role.bg} opacity-0 animate-fade-in-up shadow-2xl`}
+                style={{ animationDelay: `${0.1 * (i + 1)}s` }}
+              >
+                <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white mb-6 group-hover:scale-110 group-hover:bg-white/10 transition-all">
+                    {role.icon}
+                </div>
+                <h2 className="text-xl font-serif font-medium text-white mb-3 tracking-tight group-hover:text-gradient-gold transition-colors">{role.title}</h2>
+                <p className="text-gray-500 text-xs leading-relaxed leading-relaxed">{role.desc}</p>
+                <div className="absolute bottom-0 left-8 right-8 h-[1px] bg-gradient-to-r from-transparent via-yellow-500/20 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-700" />
+              </button>
+            ))}
+          </div>
+        )}
 
-      {/* --- STATE 3: ERROR (New Retry UI) --- */}
-      {error && !isLoading && (
-        <div className="text-center bg-[#121212] border border-red-500/30 p-8 rounded-2xl max-w-md">
-            <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">Connection Lost</h3>
-            <p className="text-gray-400 mb-6">{error}</p>
-            <div className="flex gap-3 justify-center">
-                <button onClick={handleCancel} className="px-4 py-2 text-sm text-gray-400 hover:text-white">Back to Lobby</button>
-                <button onClick={() => generateScenario(currentRole!)} className="px-6 py-2 bg-white text-black rounded-lg font-bold hover:bg-gray-200">Retry</button>
+        {/* --- STATE 2: LOADING --- */}
+        {/* --- STATE 2: LOADING (Immersive Particles) --- */}
+        {/* --- STATE 2: LOADING (Role-Specific Immersive Effects) --- */}
+        {isLoading && (
+        <div className="flex flex-col items-center justify-center h-[55vh] space-y-8 relative overflow-hidden w-full">
+            {/* Particle System */}
+            <div className="absolute inset-0 pointer-events-none">
+                {[...Array(20)].map((_, i) => {
+                let content = null;
+                let colorClass = "";
+
+                if (currentRole === "firefighter") {
+                    // Sparks: Orange Embers
+                    colorClass = "w-1 h-1 bg-orange-500 shadow-[0_0_8px_#f97316] rounded-full";
+                } else if (currentRole === "architect") {
+                    // Data Bits: Blue Binary
+                    colorClass = "text-blue-400/80 font-mono text-[10px]";
+                    content = Math.random() > 0.5 ? "0" : "1";
+                } else {
+                    // Reviewer: Emerald Code Fragments
+                    colorClass = "text-emerald-400/80 font-mono text-[10px]";
+                    const fragments = ["{ }", ";", "</>", "[]", "=>"];
+                    content = fragments[Math.floor(Math.random() * fragments.length)];
+                }
+
+                return (
+                    <div
+                    key={i}
+                    className={`absolute animate-particle opacity-0 flex items-center justify-center ${colorClass}`}
+                    style={{
+                        left: `${Math.random() * 100}%`,
+                        top: `${Math.random() * 100}%`,
+                        animationDelay: `${Math.random() * 2}s`,
+                        animationDuration: `${1.5 + Math.random() * 2}s`
+                    }}
+                    >
+                    {content}
+                    </div>
+                );
+                })}
+            </div>
+
+            <div className="relative">
+                {/* Role-Colored Spinner */}
+                <div className={`w-20 h-20 rounded-full border-[1px] border-white/5 ${
+                    currentRole === 'reviewer' ? 'border-t-emerald-500' : 
+                    currentRole === 'firefighter' ? 'border-t-red-500' : 'border-t-blue-500'
+                } animate-spin`} />
+                <Sparkles className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse ${
+                    currentRole === 'reviewer' ? 'text-emerald-500' : 'text-yellow-500'
+                }`} size={24} />
+            </div>
+            
+            <div className="text-center z-10 px-4">
+                <h2 className="text-3xl font-serif text-gradient-gold tracking-tight">
+                {currentRole === "firefighter" && "Extinguishing Logs..."}
+                {currentRole === "architect" && "compiling_intel.sh"}
+                {currentRole === "reviewer" && "scanning_vulnerabilities..."}
+                </h2>
+                <p className="text-muted-foreground text-[10px] tracking-[0.4em] mt-4 uppercase font-black opacity-40">
+                Syncing with AI Logic Core
+                </p>
             </div>
         </div>
-      )}
+        )}
 
-      {/* --- STATE 4: GAMEPLAY --- */}
-      {scenario && !isLoading && !error && (
-         <div className={`w-full max-w-3xl bg-[#121212] border ${theme.border} rounded-2xl p-6 md:p-10 shadow-2xl animate-in zoom-in-95`}>
+        {/* --- STATE 4: GAMEPLAY (The Immersive Card) --- */}
+        {scenario && !isLoading && !error && (
+          <div className={`w-full max-w-2xl ${theme.cardBg} backdrop-blur-3xl border ${theme.cardBorder} rounded-[2.5rem] p-8 md:p-12 shadow-2xl animate-fade-in-up relative overflow-hidden`}>
             
+            {/* GOLDEN FILAMENT EDGE (Inspired by image_97cd9b) */}
+            <div className="absolute left-0 top-1/4 bottom-1/4 w-[2px] bg-gradient-to-b from-transparent via-yellow-500/50 to-transparent blur-[1px]" />
+
             {/* Header Badge */}
-            <div className="flex items-center justify-between mb-6">
-                <div className={`flex items-center gap-3 px-4 py-2 rounded-lg ${theme.bg} ${theme.color} border ${theme.border}`}>
+            <div className="flex items-center justify-between mb-10">
+                <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border ${theme.border} ${theme.color} text-[9px] font-black tracking-[0.2em] uppercase shadow-[0_0_15px_rgba(0,0,0,0.5)]`}>
                     {theme.icon}
-                    <span className="font-bold uppercase tracking-wider text-sm">{currentRole} MODE</span>
+                    <span>{currentRole} ACTIVE</span>
                 </div>
-                {/* FIX: Explicitly call handleCancel to clear state */}
-                <button onClick={handleCancel} className="text-gray-500 hover:text-white text-sm">
-                    Cancel Incident
+                <button onClick={handleCancel} className="text-muted-foreground/40 hover:text-red-400 text-[9px] tracking-[0.2em] transition-all uppercase font-black">
+                    Abandon
                 </button>
             </div>
 
-            <h2 className="text-3xl font-bold text-white mb-4">{scenario.title}</h2>
-            <p className="text-gray-300 text-lg mb-6 leading-relaxed border-l-2 border-white/10 pl-4">
-                {scenario.description}
+            <h2 className="text-3xl font-serif font-medium text-white mb-6 leading-tight tracking-tight">
+              {scenario.title}
+            </h2>
+            
+            <p className="text-gray-400 text-base mb-10 leading-relaxed font-sans italic border-l-2 border-yellow-500/40 pl-6">
+                "{scenario.description}"
             </p>
 
-            {/* FIX: Hide Code Block if N/A or empty */}
             {scenario.codeSnippet && scenario.codeSnippet !== "N/A" && (
-                <div className="bg-black/50 border border-white/10 rounded-lg p-4 font-mono text-sm text-blue-300 mb-8 overflow-x-auto">
-                    <pre>{scenario.codeSnippet}</pre>
+                <div className="relative group mb-10">
+                  <div className="absolute -inset-[1px] bg-gradient-to-br from-yellow-500/20 to-white/5 rounded-2xl blur-[1px] opacity-40" />
+                  <div className="relative bg-[#0a0a0a]/90 backdrop-blur-xl border border-white/5 rounded-2xl p-6 font-mono text-xs text-blue-300/80 overflow-x-auto leading-6 shadow-[inset_0_2px_15px_rgba(0,0,0,0.9)]">
+                      <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-2">
+                        <span className="text-[8px] tracking-widest text-muted-foreground uppercase font-black">System_Log_Source</span>
+                        <div className="flex gap-1">
+                          <div className="w-1.5 h-1.5 rounded-full bg-red-500/30" />
+                          <div className="w-1.5 h-1.5 rounded-full bg-yellow-500/30" />
+                          <div className="w-1.5 h-1.5 rounded-full bg-green-500/30" />
+                        </div>
+                      </div>
+                      <pre>{scenario.codeSnippet}</pre>
+                  </div>
                 </div>
             )}
 
-            <div className="space-y-6">
-                <h3 className="text-yellow-400 font-medium text-xl">{scenario.question}</h3>
+            <div className="space-y-8">
+                <h3 className="text-lg text-white font-medium tracking-tight flex items-center gap-4">
+                  <div className="w-8 h-[1px] bg-yellow-500/40" />
+                  {scenario.question}
+                </h3>
 
-                {/* --- OPTIONS LOGIC --- */}
                 {scenario.options ? (
-                    <div className="grid grid-cols-1 gap-3">
+                    <div className="grid grid-cols-1 gap-4">
                         {scenario.options.map((opt, idx) => {
-                            // LOGIC: Determine Color
-                            let btnClass = "border-white/10 bg-white/5 hover:bg-white/10"; // Default
+                            // PERSISTENT GOLD BOUNDARY LOGIC
+                            let btnStyle = "bg-white/[0.03] border-yellow-600/20 text-gray-400 hover:border-yellow-500 hover:bg-yellow-500/5 hover:text-white";
                             
                             if (showResult) {
                                 if (opt === scenario.correctOption) {
-                                    btnClass = "border-green-500 bg-green-500/20 text-white"; // Correct
-                                } else if (opt === selectedOption && opt !== scenario.correctOption) {
-                                    btnClass = "border-red-500 bg-red-500/20 text-white"; // Wrong Selection
+                                    btnStyle = "bg-green-500/10 border-green-500/60 text-green-400 shadow-[0_0_20px_rgba(34,197,94,0.1)]";
+                                } else if (opt === selectedOption) {
+                                    btnStyle = "bg-red-500/10 border-red-500/60 text-red-400";
                                 } else {
-                                    btnClass = "border-white/5 opacity-50"; // Unselected
+                                    btnStyle = "opacity-20 border-white/5 grayscale pointer-events-none";
                                 }
                             }
 
@@ -194,60 +294,70 @@ const ScenarioChallenge = () => {
                                     key={idx} 
                                     onClick={() => handleOptionClick(opt)}
                                     disabled={showResult} 
-                                    className={`p-4 rounded-xl border text-left transition-all flex items-center justify-between ${btnClass}`}
+                                    className={`p-5 rounded-xl border text-left transition-all duration-500 flex items-center justify-between group shadow-xl ${btnStyle}`}
                                 >
-                                    <span>{opt}</span>
-                                    {showResult && opt === scenario.correctOption && <CheckCircle2 className="text-green-500" size={20} />}
-                                    {showResult && opt === selectedOption && opt !== scenario.correctOption && <XCircle className="text-red-500" size={20} />}
+                                    <span className="font-medium text-sm tracking-wide">{opt}</span>
+                                    {showResult && opt === scenario.correctOption && <CheckCircle2 className="text-green-500 animate-in zoom-in" size={20} />}
+                                    {showResult && opt === selectedOption && opt !== scenario.correctOption && <XCircle className="text-red-400 animate-in zoom-in" size={20} />}
                                 </button>
                             );
                         })}
                     </div>
                 ) : (
-                    /* Text Input Mode */
                     <div className="space-y-4">
                         <textarea 
                             value={userAnswer}
                             onChange={(e) => setUserAnswer(e.target.value)}
-                            placeholder="Type your solution..."
-                            className="w-full bg-black/30 border border-white/20 rounded-xl p-4 text-white h-32"
+                            placeholder="Type your strategic deployment fix..."
+                            className="w-full bg-black/40 border border-white/10 rounded-2xl p-6 text-white h-32 focus:outline-none focus:border-yellow-500/40 transition-all placeholder:text-muted-foreground/30 text-sm"
                         />
-                        <button 
+                        <Button 
+                            variant="hero"
+                            className="w-full rounded-2xl py-6 text-lg font-bold group"
                             onClick={() => setShowResult(true)}
-                            className="w-full bg-white text-black px-6 py-3 rounded-xl font-bold hover:bg-gray-200"
                         >
-                            Deploy Fix
-                        </button>
+                            Deploy Solution
+                            <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+                        </Button>
                     </div>
                 )}
 
-                {/* --- FEEDBACK AREA --- */}
                 {showResult && (
-                    <div className="bg-[#1a1a1a] border border-white/10 rounded-xl p-6 animate-in fade-in slide-in-from-bottom-2 mt-6">
-                        <div className="flex gap-3 mb-2">
-                            <Lightbulb className="text-yellow-400 w-6 h-6 shrink-0" />
-                            <div>
-                                <h4 className="font-bold text-white mb-1">Analysis</h4>
-                                <p className="text-gray-300 text-sm leading-relaxed">{scenario.explanation}</p>
+                    <div className="relative mt-12 animate-in slide-in-from-top-4 duration-700">
+                        <div className="absolute inset-0 bg-yellow-500/5 blur-3xl rounded-full" />
+                        <div className="relative bg-black/40 border border-yellow-500/20 rounded-[2rem] p-8 shadow-2xl">
+                            <div className="flex gap-4">
+                                <div className="p-3 rounded-xl bg-yellow-500/10 text-yellow-500 h-fit">
+                                  <Lightbulb size={24} />
+                                </div>
+                                <div>
+                                    <h4 className="text-gradient-gold font-serif text-xl mb-2 tracking-tight">Technical Post-Mortem</h4>
+                                    <p className="text-gray-400 text-sm leading-relaxed italic font-light tracking-wide leading-relaxed">
+                                      {scenario.explanation}
+                                    </p>
+                                </div>
                             </div>
+                            
+                            <button 
+                                onClick={() => generateScenario(currentRole!)} 
+                                className="mt-8 flex items-center justify-center gap-3 w-full py-4 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl text-white text-[10px] font-black tracking-[0.4em] uppercase transition-all group"
+                            >
+                                <RotateCw size={14} className="group-hover:rotate-180 transition-transform duration-1000" /> 
+                                Request New Intel
+                            </button>
                         </div>
-                        
-                        <button 
-                            onClick={() => generateScenario(currentRole!)} 
-                            className="mt-4 flex items-center justify-center gap-2 w-full py-3 bg-white/5 hover:bg-white/10 rounded-lg text-white font-medium transition-all"
-                        >
-                            <RotateCw size={18} /> Generate New Incident
-                        </button>
                     </div>
                 )}
             </div>
-         </div>
-      )}
+          </div>
+        )}
 
-      {/* Footer Tip */}
-      <div className="mt-8 flex items-center gap-2 text-xs text-gray-500">
-        <Lightbulb size={14} />
-        <span>Pro Tip: Every click generates a brand new, AI-created disaster.</span>
+        {/* Footer Tip */}
+        <div className="mt-20 flex items-center gap-6 text-[9px] tracking-[0.4em] text-muted-foreground/30 uppercase font-black">
+          <div className="w-12 h-[1px] bg-white/5" />
+          <span>Neural Link Established</span>
+          <div className="w-12 h-[1px] bg-white/5" />
+        </div>
       </div>
     </div>
   );

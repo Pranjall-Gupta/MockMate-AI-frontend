@@ -1,8 +1,14 @@
 import type { Config } from "tailwindcss";
+import tailwindAnimate from "tailwindcss-animate"; // Fixes the 'require' error
 
 export default {
   darkMode: ["class"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  content: [
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
+  ],
   prefix: "",
   theme: {
     container: {
@@ -51,9 +57,12 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // MERGED GOLD COLORS
         gold: {
-          DEFAULT: "hsl(var(--gold))",
+          DEFAULT: '#C9A227',
+          light: '#EEDC82',
           muted: "hsl(var(--gold-muted))",
+          glow: 'rgba(201, 162, 39, 0.3)',
         },
         charcoal: "hsl(var(--charcoal))",
         sidebar: {
@@ -93,6 +102,15 @@ export default {
           "0%": { opacity: "0", transform: "scale(0.95)" },
           "100%": { opacity: "1", transform: "scale(1)" },
         },
+        // MERGED GOLD KEYFRAMES
+        'gold-pulse': {
+          '0%, 100%': { boxShadow: '0 0 15px rgba(201, 162, 39, 0.2)' },
+          '50%': { boxShadow: '0 0 30px rgba(201, 162, 39, 0.5)' },
+        },
+        'slide-up': {
+          '0%': { transform: 'translateY(20px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -100,8 +118,11 @@ export default {
         "fade-in": "fade-in 0.6s ease-out forwards",
         "fade-in-up": "fade-in-up 0.8s ease-out forwards",
         "scale-in": "scale-in 0.5s ease-out forwards",
+        // MERGED GOLD ANIMATIONS
+        'gold-pulse': 'gold-pulse 3s infinite ease-in-out',
+        'slide-up': 'slide-up 0.5s ease-out forwards',
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [tailwindAnimate], // Use the imported variable here
 } satisfies Config;
