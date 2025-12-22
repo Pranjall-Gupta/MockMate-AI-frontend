@@ -2,6 +2,8 @@ import { useState } from "react";
 import { ArrowLeft, LayoutGrid, MessageSquare, Database, ShoppingBag } from "lucide-react";
 import { Link } from "react-router-dom";
 import SystemDesignCanvas from "../components/systemDesignCanvas";
+// 1. IMPORT THE MODAL COMPONENT
+import ArchitectSolutionModal from "../components/ArchitectSolutionModal";
 
 const CHALLENGES = [
   { id: "general", label: "Blank Canvas", icon: <LayoutGrid size={16} /> },
@@ -12,14 +14,27 @@ const CHALLENGES = [
 
 const SystemDesignPage = () => {
   const [activeChallenge, setActiveChallenge] = useState("general");
+  
+  // 2. STATE FOR THE AUDIT MODAL
+  const [isSolutionOpen, setIsSolutionOpen] = useState(false);
 
   return (
     <div className="h-screen bg-[#0a0a0a] text-foreground font-sans flex flex-col">
       <header className="border-b border-white/10 p-4 shrink-0 bg-[#0a0a0a]">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-white transition-colors">
-                <ArrowLeft size={16} /> <span className="text-sm font-medium tracking-widest uppercase">EXIT</span>
-            </Link>
+            <div className="flex items-center gap-4">
+                <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-white transition-colors">
+                    <ArrowLeft size={16} /> <span className="text-sm font-medium tracking-widest uppercase">EXIT</span>
+                </Link>
+
+                {/* 3. AUDIT CHECKLIST BUTTON (Placed near Exit) */}
+                <button 
+                    onClick={() => setIsSolutionOpen(true)}
+                    className="px-4 py-1.5 border border-gold/30 rounded-full text-[10px] font-bold text-gold hover:bg-gold/10 transition-all uppercase tracking-widest"
+                >
+                    Audit Checklist
+                </button>
+            </div>
             
             {/* CHALLENGE SELECTOR */}
             <div className="flex bg-white/5 p-1 rounded-full border border-white/10">
@@ -49,6 +64,13 @@ const SystemDesignPage = () => {
          {/* Pass the activeChallenge to the Canvas component */}
          <SystemDesignCanvas challenge={activeChallenge} />
       </div>
+
+      {/* 4. ARCHITECT SOLUTION MODAL (Placed at the bottom of the return statement) */}
+      <ArchitectSolutionModal 
+        isOpen={isSolutionOpen} 
+        onClose={() => setIsSolutionOpen(false)} 
+        challenge={activeChallenge} 
+      />
     </div>
   );
 };
