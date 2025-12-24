@@ -10,7 +10,6 @@ import SystemDesignPage from "./pages/SystemDesignPage";
 import ScenarioChallenge from "./pages/ScenarioChallenge";
 import ResumeRoaster from "./pages/ResumeRoaster";
 import SQLDetective from "./pages/SQLDetective";
-
 const queryClient = new QueryClient();
 
 const App = () => (
