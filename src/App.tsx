@@ -10,6 +10,7 @@ import SystemDesignPage from "./pages/SystemDesignPage";
 import ScenarioChallenge from "./pages/ScenarioChallenge";
 import ResumeRoaster from "./pages/ResumeRoaster";
 import SQLDetective from "./pages/SQLDetective";
+import CodeArena from "./pages/CodeArena";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/system-design" element={<SystemDesignPage />} />
           <Route path="/scenarios" element={<ScenarioChallenge />} />
           <Route path="/sql-detective" element={<SQLDetective />} />
+          <Route path="/code-arena" element={<CodeArena />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

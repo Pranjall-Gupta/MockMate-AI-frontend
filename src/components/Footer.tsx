@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { 
   ArrowRight, 
   Github as GithubIcon, 
@@ -32,6 +33,7 @@ const XIconBranded = ({ className }: { className?: string }) => (
 
 const Footer = ({ roadmapState, featuresState, systemState }) => {
   const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   // Use the props instead of local state
   const isRoadmapModalOpen = roadmapState.isOpen;
@@ -42,16 +44,52 @@ const Footer = ({ roadmapState, featuresState, systemState }) => {
 
   const isSystemModalOpen = systemState.isOpen;
   const setIsSystemModalOpen = systemState.setIsOpen;
+
+  const [isApiModalOpen, setIsApiModalOpen] = useState(false);
+
+  const handleWaitlistSubmit = async (e: React.FormEvent) => {
+    e.preventDefault(); // This stops the page from refreshing!
+    
+    if (!email) return;
+    setIsLoading(true);
+
+    try {
+      // Use port 8081 as per your application.properties
+      const response = await fetch("http://localhost:8081/api/waitlist/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      if (response.ok) {
+        toast.success("Welcome to the inner circle!", {
+          description: "You've been added to the MockMate AI waitlist.",
+          style: { background: "#0F172A", color: "#FACC15", border: "1px solid #FACC1533" }
+        });
+        setEmail(""); // Clear the input on success
+      } else {
+        const errorMsg = await response.text();
+        toast.error(errorMsg || "Already on the list!");
+      }
+    } catch (error) {
+      toast.error("Connection Error", {
+        description: "Please ensure your Spring Boot backend is running on port 8081."
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const footerLinks = {
     Product: [
       { name: "Features", href: "#", isFeaturesPopup: true },
       { name: "Roadmap", href: "#", isRoadmapPopup: true }, // Updated to trigger popup
-      { name: "Waitlist", href: "#waitlist" }
+      { name: "Waitlist", href: "#waitlist", isWaitlistLink: true }
     ],
     Resources: [
       { name: "Documentation", href: "https://github.com/Pranjall-Gupta/MockMate-AI#readme" },
       { name: "System Design", href: "#", isSystemPopup: true },
-      { name: "API Reference", href: "#" } 
+      { name: "API Reference", href: "#",isApiPopup: true } 
     ],
     Developer: [
       { name: "Main Portfolio", href: "https://pranjalgupta.dev" },
@@ -121,25 +159,47 @@ const Footer = ({ roadmapState, featuresState, systemState }) => {
     }
   ];
 
+  const apiEndpoints = [
+    {
+      method: "POST",
+      path: "/api/waitlist/join",
+      desc: "Registers a new user email to the MongoDB Atlas waitlist cluster.",
+      payload: "{ 'email': 'string' }"
+    },
+    {
+      method: "POST",
+      path: "/api/ai/interview/start",
+      desc: "Initializes a GPT-4o session and triggers Azure Speech synthesis.",
+      payload: "{ 'scenarioId': 'string' }"
+    },
+    {
+      method: "GET",
+      path: "/api/ai/resume/roast",
+      desc: "Retrieves a technical critique of the uploaded PDF via Azure AI Foundry.",
+      payload: "Multipart/File"
+    }
+  ];
+
   return (
     <footer id="about" className="relative pt-24 pb-12 px-4 border-t border-border/30 bg-background overflow-hidden">
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none animate-pulse" />
 
       <div className="max-w-6xl mx-auto relative z-10">
-        <div className="text-center mb-24">
+        <div id="waitlist-form" className="text-center mb-24">
           <h2 className="font-serif text-3xl md:text-5xl font-medium mb-6 text-white">
             Join the <span className="text-gradient-gold">Waitlist</span>
           </h2>
-          <form className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-lg mx-auto glass p-2 rounded-full border-white/5 shadow-[0_0_20px_rgba(212,175,55,0.05)]">
+          <form onSubmit={handleWaitlistSubmit} className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-lg mx-auto glass p-2 rounded-full border-white/5 shadow-[0_0_20px_rgba(212,175,55,0.05)]">
             <input
               type="email"
+              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
+              placeholder="Enter your professional email"
               className="w-full sm:flex-1 bg-transparent outline-none py-3 px-6 text-foreground placeholder:text-muted-foreground/50 transition-colors"
             />
-            <Button variant="hero" className="rounded-full group whitespace-nowrap px-8">
-              Get Early Access
+            <Button type="submit" variant="hero" disabled={isLoading} className="rounded-full group whitespace-nowrap px-8">
+              {isLoading?"Joining...":"Get Early Access"}
               <ArrowRight className="ml-2 w-4 h-4 transition-transform group-hover:translate-x-1" />
             </Button>
           </form>
@@ -166,7 +226,11 @@ const Footer = ({ roadmapState, featuresState, systemState }) => {
                       onClick={() => {
                         if (link.isSystemPopup) setIsSystemModalOpen(true);
                         else if (link.isFeaturesPopup) setIsFeaturesModalOpen(true);
-                        else if (link.isRoadmapPopup) setIsRoadmapModalOpen(true); // New trigger
+                        else if (link.isRoadmapPopup) setIsRoadmapModalOpen(true);
+                        else if (link.isWaitlistLink) {
+                          document.getElementById('waitlist-form')?.scrollIntoView({ behavior: 'smooth' });
+                        }
+                        else if (link.isApiPopup) setIsApiModalOpen(true);
                         else window.open(link.href, "_blank");
                       }}
                       className="text-sm text-muted-foreground hover:text-yellow-500 transition-all duration-300 flex items-center gap-2 group text-left"
@@ -288,6 +352,38 @@ const Footer = ({ roadmapState, featuresState, systemState }) => {
             </div>
             <div className="px-4 py-2 bg-yellow-500/5 border-t border-yellow-500/20 flex justify-center">
               <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-yellow-500/80">Technical Stack</p>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* --- API REFERENCE MODAL --- */}
+      {isApiModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm transition-all duration-300 animate-in fade-in" onClick={() => setIsApiModalOpen(false)}>
+          <div className="relative w-full max-w-2xl glass rounded-2xl border border-yellow-500/30 bg-blue-900/10 shadow-[0_0_30px_rgba(212,175,55,0.15)] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center px-4 py-2 border-b border-yellow-500/20 bg-yellow-500/5">
+              <div className="flex items-center gap-2">
+                <Terminal size={12} className="text-yellow-500" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-yellow-500/80">Inspector: API_Endpoints.json</span>
+              </div>
+              <button onClick={() => setIsApiModalOpen(false)} className="p-1 hover:bg-yellow-500/20 rounded-md transition-colors"><XIcon size={14} className="text-yellow-500/60" /></button>
+            </div>
+            <div className="p-6 space-y-4 bg-black/40 overflow-y-auto max-h-[60vh] custom-scrollbar">
+              {apiEndpoints.map((api, i) => (
+                <div key={i} className="p-4 rounded-xl border border-white/5 bg-white/5 group hover:border-yellow-500/20 transition-all">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-yellow-500/20 text-yellow-500 border border-yellow-500/30">{api.method}</span>
+                    <code className="text-[11px] text-white font-mono">{api.path}</code>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mb-3">{api.desc}</p>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[9px] uppercase tracking-tighter text-muted-foreground/40 font-bold">Payload Structure:</span>
+                    <code className="text-[10px] p-2 bg-black/40 rounded border border-white/5 text-yellow-500/80">{api.payload}</code>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="px-4 py-2 bg-yellow-500/5 border-t border-yellow-500/20 flex justify-center">
+              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-yellow-500/80">Internal MockMate Microservices</p>
             </div>
           </div>
         </div>

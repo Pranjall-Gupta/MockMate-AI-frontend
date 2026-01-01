@@ -1,4 +1,4 @@
-import { Mic, PenTool, Layers, Zap } from "lucide-react";
+import { Code2,Timer, PenTool, Layers, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Database } from "lucide-react";
 const FeatureGrid = () => {
@@ -18,33 +18,50 @@ const FeatureGrid = () => {
         {/* Bento Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-[1px] bg-border/50 rounded-xl overflow-hidden">
           
-          {/* Card 1 - Large (Real-time Voice Analysis) -> LINKED */}
-          <Link to="/interview" className="lg:col-span-2 lg:row-span-2 block group cursor-pointer h-full">
-            <div className="bento-card flex flex-col justify-between min-h-[300px] lg:min-h-[400px] h-full transition-colors group-hover:border-primary/50">
+          {/* Card 1 - Algorithm Arena (Replaces Voice Analysis) */}
+          <Link to="/code-arena" className="lg:col-span-2 lg:row-span-2 block group cursor-pointer h-full">
+            <div className="bento-card flex flex-col justify-between min-h-[300px] lg:min-h-[400px] h-full transition-all group-hover:border-primary/50">
               <div>
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-6">
-                  <Mic className="w-6 h-6 text-primary" strokeWidth={1.5} />
+                <div className="flex justify-between items-start mb-6">
+                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Code2 className="w-6 h-6 text-primary" strokeWidth={1.5} />
+                  </div>
+                  <div className="flex items-center gap-2 bg-black/40 px-3 py-1 rounded-full border border-white/10">
+                    <Timer className="w-3 h-3 text-yellow-500 animate-pulse" />
+                    <span className="text-[10px] font-mono text-yellow-500 uppercase tracking-tighter">Live Contest Mode</span>
+                  </div>
                 </div>
                 <h3 className="font-serif text-2xl md:text-3xl font-medium mb-3">
-                  Real-time Voice Analysis
+                  Algorithm Arena
                 </h3>
                 <p className="text-muted-foreground leading-relaxed">
-                  Advanced speech recognition that understands context, evaluates 
-                  technical accuracy, and provides instant feedback on your verbal explanations.
+                  Face dynamic, AI-generated Medium and Hard coding challenges. 
+                  Race against the clock and receive instant evaluation on logic, 
+                  time complexity ($O(n)$), and edge-case handling.
                 </p>
               </div>
-              {/* Waveform Visual */}
-              <div className="mt-8 flex items-end gap-1 h-16">
-                {Array.from({ length: 40 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex-1 bg-primary/30 rounded-full transition-all duration-300"
-                    style={{
-                      height: `${20 + Math.sin(i * 0.5) * 30 + Math.random() * 20}%`,
-                      animationDelay: `${i * 50}ms`,
-                    }}
-                  />
-                ))}
+
+              {/* Terminal / Code Editor Visual */}
+              <div className="mt-8 rounded-lg bg-black/60 border border-white/5 p-4 font-mono text-[11px] overflow-hidden relative group-hover:bg-black/80 transition-colors">
+                <div className="flex gap-1.5 mb-3">
+                  <div className="w-2.5 h-2.5 rounded-full bg-red-500/40" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/40" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-green-500/40" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-blue-400">public class Solution &#123;</p>
+                  <p className="text-purple-400 pl-4">public int lengthOfLongestSubstring(String s) &#123;</p>
+                  <p className="text-white pl-8">Set&lt;Character&gt; set = new HashSet&lt;&gt;();</p>
+                  <p className="text-white pl-8">int res = 0, left = 0;</p>
+                  <p className="text-green-500/60 pl-8">// AI Prompting: Optimize for O(n) using Sliding Window</p>
+                  <p className="text-white pl-8">for (int r = 0; r &lt; s.length(); r++) &#123; ... &#125;</p>
+                  <p className="text-purple-400 pl-4">&#125;</p>
+                  <p className="text-blue-400">&#125;</p>
+                </div>
+                {/* Visual Timer Badge */}
+                <div className="absolute bottom-4 right-4 bg-primary/20 backdrop-blur-md px-3 py-1 rounded border border-primary/30 text-primary font-bold">
+                  23:41.08
+                </div>
               </div>
             </div>
           </Link>
