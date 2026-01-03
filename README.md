@@ -1,73 +1,116 @@
-# Welcome to your Lovable project
+# 🚀 MockMate AI: Advanced Technical Interview Intelligence
 
-## Project info
+**MockMate AI** is a precision-engineered, full-stack platform designed to bridge the gap between academic preparation and elite industry standards. Leveraging **Java 21**, **Spring Boot**, and **Azure AI**, it provides an immersive ecosystem for mastering high-stakes technical interviews.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## 🛠️ Tech Stack
 
-## How can I edit this code?
+| Layer | Technology |
+| --- | --- |
+| **Frontend** | React 18, TypeScript, Tailwind CSS, Shadcn UI, Vite |
+| **Backend** | Java 21, Spring Boot 3.5, Maven |
+| **AI Orchestration** | Azure OpenAI (GPT-4o), Azure AI Foundry |
+| **Voice Intelligence** | Azure AI Speech (STS/TTS), Transcription SDK |
+| **Database** | MongoDB Atlas (Cloud Cluster) |
+| **State/Logic** | Lucide React, Sonner (Toast), React Router |
 
-There are several ways of editing your application.
+---
 
-**Use Lovable**
+## ✨ Key Features
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+### 🎮 Algorithm Arena (LeetCode Style)
 
-Changes made via Lovable will be committed automatically to this repo.
+A competitive coding environment where **GPT-4o** dynamically generates Medium/Hard Java challenges.
 
-**Use your preferred IDE**
+* **Live Contest Mode:** Real-time timer and performance tracking.
+* **AI Judge:** Immediate evaluation of logic and time complexity ( analysis).
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### 🎙️ Real-time Voice Interviewer
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+Context-aware technical interviews powered by **Azure AI Speech**.
 
-Follow these steps:
+* **Transcription:** High-fidelity speech-to-text conversion.
+* **Soft Skills Analysis:** AI-driven metrics for clarity, filler word detection, and tone.
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### 🏛️ System Design Canvas
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+An interactive architecting tool for distributed systems.
 
-# Step 3: Install the necessary dependencies.
-npm i
+* **Vision Analysis:** AI-critique of architectural blueprints.
+* **Structural Reasoning:** Pattern validation for load balancing, caching, and microservices.
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+### 🕵️ SQL Detective & Disaster Recovery
+
+* **SQL Gym:** Master schema design and query optimization.
+* **Production Firefighter:** Solve 150+ real-world Java/Azure infrastructure disasters.
+
+### 📋 Cloud-Synced Waitlist
+
+A secure, persistence-layer for user onboarding.
+
+* **Architecture:** React frontend → Spring Boot API → MongoDB Atlas.
+
+---
+
+## 🏗️ System Architecture
+
+1. **Client:** Vite-powered React SPA with glass-morphism UI.
+2. **API Gateway:** Spring Boot REST API (Port 8081).
+3. **AI Layer:** Direct integration with **Azure OpenAI Service** for LLM orchestration.
+4. **Data Layer:** Distributed NoSQL storage via **MongoDB Atlas**.
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+* JDK 21
+* Node.js (v18+)
+* MongoDB Atlas Account
+* Azure Cognitive Services Key
+
+### Installation
+
+1. **Clone the repository**
+```bash
+git clone https://github.com/Pranjall-Gupta/MockMate-AI.git
+
 ```
 
-**Edit a file directly in GitHub**
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+2. **Backend Setup**
+* Navigate to `/backend`.
+* Update `application.properties` with your Azure and MongoDB credentials.
+* Run the application:
+```bash
+./mvnw spring-boot:run
 
-**Use GitHub Codespaces**
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
 
-## What technologies are used for this project?
 
-This project is built with:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+3. **Frontend Setup**
+* Navigate to `/frontend`.
+* Install dependencies: `npm install`.
+* Start development server: `npm run dev`.
 
-## How can I deploy this project?
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
 
-## Can I connect a custom domain to my Lovable project?
+---
 
-Yes, you can!
+## 👨‍💻 Developed By
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+**Pranjal Gupta**
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+* [Portfolio](https://pranjalgupta.dev)
+* [LinkedIn](https://www.linkedin.com/in/pranjal-gupta-4367052a0/)
+* [LeetCode](https://leetcode.com/u/Pranjal__Gupta/)
+
+---
+
+### 🎓 Project Context
+
+Developed as part of the **Microsoft IEP Capstone Project**, focusing on the intersection of Generative AI and Technical Education.
+
+---
