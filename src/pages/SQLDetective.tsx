@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Database, Search, Terminal, AlertCircle, Award, Loader2, Play, Lightbulb, Eye, X } from "lucide-react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import api from "@/lib/api";
 
 interface MysteryData {
   title: string;
@@ -43,12 +44,8 @@ const SQLDetective = () => {
     setGrade(null);
     setUserQuery("SELECT * FROM ...");
     try {
-      const response = await fetch("http://localhost:8081/api/interview/sql/mystery", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ difficulty: "Medium" }),
-      });
-      const data = await response.json();
+      const response = await api.post("/interview/sql/mystery", { difficulty: "Medium" });
+      const data = response.data;
       const parsedData = typeof data.mystery === 'string' ? JSON.parse(data.mystery) : data.mystery;
       setMystery(parsedData);
     } catch (e) { 
@@ -60,16 +57,12 @@ const SQLDetective = () => {
     if (!mystery) return;
     setIsGrading(true);
     try {
-      const response = await fetch("http://localhost:8081/api/interview/sql/solve", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+      const response = await api.post("/interview/sql/solve", { 
           mission: mystery.mission, 
           query: userQuery,
           solution: mystery.solution 
-        }),
       });
-      const data = await response.json();
+      const data = response.data;
       const result = typeof data.result === 'string' ? JSON.parse(data.result) : data.result;
       setGrade(result);
       if (result.status === "Failed") setAttempts(prev => prev + 1);

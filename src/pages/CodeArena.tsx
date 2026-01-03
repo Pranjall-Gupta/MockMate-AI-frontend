@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Timer, Send, ArrowRight, Code2, Loader2, Sparkles, ChevronDown, Lightbulb, Lock ,Cpu,Layers,XIcon} from "lucide-react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
-
+import api from "@/lib/api";
 const CodeArena = () => {
   const [question, setQuestion] = useState<any>(null);
   const [code, setCode] = useState("");
@@ -28,16 +28,12 @@ const CodeArena = () => {
     setIsEvaluating(true);
     setEvaluation(null);
     try {
-      const res = await fetch("http://localhost:8081/api/arena/evaluate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code,
-          problemContext: question.description,
-        }),
+      // USING API LIB: Method changed to api.post
+      const res = await api.post("/arena/evaluate", {
+        code,
+        problemContext: question.description,
       });
-      const data = await res.json();
-      const result = JSON.parse(data.evaluation);
+      const result = JSON.parse(res.data.evaluation);
       setEvaluation(result);
 
       if (result.isCorrect) {
@@ -61,9 +57,9 @@ const CodeArena = () => {
     setTimer(0);
 
     try {
-      const res = await fetch("http://localhost:8081/api/arena/generate");
-      const data = await res.json();
-      const parsed = JSON.parse(data.question);
+      // USING API LIB: Method changed to api.get
+      const res = await api.get("/arena/generate");
+      const parsed = JSON.parse(res.data.question);
       setQuestion(parsed);
       setCode(parsed.starterCode);
     } catch (err) {

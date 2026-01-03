@@ -160,25 +160,90 @@ const Footer = ({ roadmapState, featuresState, systemState }) => {
   ];
 
   const apiEndpoints = [
-    {
-      method: "POST",
-      path: "/api/waitlist/join",
-      desc: "Registers a new user email to the MongoDB Atlas waitlist cluster.",
-      payload: "{ 'email': 'string' }"
-    },
-    {
-      method: "POST",
-      path: "/api/ai/interview/start",
-      desc: "Initializes a GPT-4o session and triggers Azure Speech synthesis.",
-      payload: "{ 'scenarioId': 'string' }"
-    },
-    {
-      method: "GET",
-      path: "/api/ai/resume/roast",
-      desc: "Retrieves a technical critique of the uploaded PDF via Azure AI Foundry.",
-      payload: "Multipart/File"
-    }
-  ];
+  // --- Waitlist & User Management ---
+  {
+    method: "POST",
+    path: "/api/waitlist/join",
+    desc: "Registers a new user email to the MongoDB Atlas waitlist cluster.",
+    payload: "{ 'email': 'string' }"
+  },
+
+  // --- Algorithm Arena (Coding Challenges) ---
+  {
+    method: "GET",
+    path: "/api/arena/generate",
+    desc: "Fetches a new AI-generated Java coding challenge, including test cases, hints, and solutions.",
+    payload: "N/A"
+  },
+  {
+    method: "POST",
+    path: "/api/arena/evaluate",
+    desc: "Sends the user's code and problem context to the AI judge for grading and performance analysis.",
+    payload: "{ 'code': 'string', 'problemContext': 'string' }"
+  },
+
+  // --- AI Interview & Voice Experience ---
+  {
+    method: "POST",
+    path: "/api/interview/chat",
+    desc: "Handles real-time technical chat turns, extracting scores and providing adaptive follow-ups.",
+    payload: "{ 'history': 'Array', 'userInput': 'string' }"
+  },
+  {
+    method: "POST",
+    path: "/api/interview/submit",
+    desc: "Processes voice recordings (WAV) for speech-to-text, tone analysis, and soft-skill metrics.",
+    payload: "FormData (AudioBlob)"
+  },
+  {
+    method: "POST",
+    path: "/api/ai/interview/start",
+    desc: "Initializes a GPT-4o session and triggers Azure Speech synthesis.",
+    payload: "{ 'scenarioId': 'string' }"
+  },
+
+  // --- Resume Roaster & Drills ---
+  {
+    method: "POST",
+    path: "/api/interview/resume",
+    desc: "Matches resume text against a JD to provide a score, roast, and missing keyword analysis.",
+    payload: "{ 'resume': 'string', 'jobDescription': 'string' }"
+  },
+  {
+    method: "POST",
+    path: "/api/interview/evaluate-answer",
+    desc: "Grades a user's verbal/textual response to specific 'hard questions' from their resume.",
+    payload: "{ 'question': 'string', 'answer': 'string' }"
+  },
+
+  // --- System Design & Scenario Challenges ---
+  {
+    method: "GET",
+    path: "/api/arena/disaster",
+    desc: "Generates a live architectural disaster scenario requiring immediate mitigation.",
+    payload: "{ 'challenge': 'string' }"
+  },
+  {
+    method: "POST",
+    path: "/api/interview/scenario",
+    desc: "Generates role-based technical lead scenarios (Architect, Firefighter, Reviewer).",
+    payload: "{ 'role': 'string' }"
+  },
+
+  // --- SQL Detective ---
+  {
+    method: "POST",
+    path: "/api/interview/sql/mystery",
+    desc: "Generates a dynamic SQL 'Murder Mystery' challenge with custom schema.",
+    payload: "{ 'difficulty': 'string' }"
+  },
+  {
+    method: "POST",
+    path: "/api/interview/sql/solve",
+    desc: "Validates user-written SQL queries against hidden case data for logical success.",
+    payload: "{ 'query': 'string', 'solution': 'string' }"
+  }
+];
 
   return (
     <footer id="about" className="relative pt-24 pb-12 px-4 border-t border-border/30 bg-background overflow-hidden">

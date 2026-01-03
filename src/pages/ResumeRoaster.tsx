@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import api from "@/lib/api";
 import { 
   ArrowLeft, 
   FileText, 
@@ -41,12 +42,12 @@ const ResumeRoaster = () => {
     setAnalysis(null);
 
     try {
-        const response = await fetch("http://localhost:8081/api/interview/resume", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ resume: resumeText, jobDescription: jdText }),
+        const response = await api.post("/interview/resume", { 
+            resume: resumeText, 
+            jobDescription: jdText 
         });
-        const data = await response.json();
+        
+        const data = response.data;
         
         let rawJson = data.analysis;
         if (rawJson.includes("```json")) {
@@ -65,12 +66,12 @@ const ResumeRoaster = () => {
     if (!userAnswer.trim() || !practiceQuestion) return;
     setIsEvaluating(true);
     try {
-        const response = await fetch("http://localhost:8081/api/interview/evaluate-answer", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ question: practiceQuestion, answer: userAnswer }),
+        const response = await api.post("/interview/evaluate-answer", { 
+            question: practiceQuestion, 
+            answer: userAnswer 
         });
-        const data = await response.json();
+        
+        const data = response.data;
         
         // SAFE PARSING
         let rawJson = data.evaluation;

@@ -49,16 +49,22 @@ const FeatureGrid = () => {
                   <div className="w-2.5 h-2.5 rounded-full bg-green-500/40" />
                 </div>
                 <div className="space-y-1">
-                  <p className="text-blue-400">public class Solution &#123;</p>
-                  <p className="text-purple-400 pl-4">public int lengthOfLongestSubstring(String s) &#123;</p>
-                  <p className="text-white pl-8">Set&lt;Character&gt; set = new HashSet&lt;&gt;();</p>
-                  <p className="text-white pl-8">int res = 0, left = 0;</p>
-                  <p className="text-green-500/60 pl-8">// AI Prompting: Optimize for O(n) using Sliding Window</p>
-                  <p className="text-white pl-8">for (int r = 0; r &lt; s.length(); r++) &#123; ... &#125;</p>
-                  <p className="text-purple-400 pl-4">&#125;</p>
-                  <p className="text-blue-400">&#125;</p>
+                  {/* Keyword: Gold */}
+                  <p className="text-primary">public class Solution &#123;</p>
+                  <p className="text-primary pl-4">public int lengthOfLongestSubstring(String s) &#123;</p>
+                  
+                  {/* logic: Off-White/Glass */}
+                  <p className="text-white/90 pl-8">Set&lt;Character&gt; set = new HashSet&lt;&gt;();</p>
+                  <p className="text-white/90 pl-8">int res = 0, left = 0;</p>
+                  
+                  {/* Comments: Muted Gold */}
+                  <p className="text-white/90 pl-8">for (int r = 0; r &lt; s.length(); r++) &#123; ... &#125;</p>
+                  
+                  <p className="text-primary pl-4">&#125;</p>
+                  <p className="text-primary">&#125;</p>
                 </div>
-                {/* Visual Timer Badge */}
+                
+                {/* Visual Timer Badge (Ensure this uses text-primary) */}
                 <div className="absolute bottom-4 right-4 bg-primary/20 backdrop-blur-md px-3 py-1 rounded border border-primary/30 text-primary font-bold">
                   23:41.08
                 </div>

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion"; // Added AnimatePresenc
 import { ArrowLeft, LayoutGrid, MessageSquare, Database, ShoppingBag, Terminal, AlertTriangle, X, Brain, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import api from "@/lib/api";
 import SystemDesignCanvas from "../components/systemDesignCanvas";
 import ArchitectSolutionModal from "../components/ArchitectSolutionModal";
 
@@ -24,8 +25,8 @@ const SystemDesignPage = () => {
   const startInterview = async () => {
     setIsLoading(true); // Start loading animation
     try {
-      const response = await fetch(`http://localhost:8081/api/interview/generate-disaster?challenge=${activeChallenge}`);
-      const data = await response.json();
+      const response = await api.get(`/interview/generate-disaster?challenge=${activeChallenge}`);
+      const data = response.data;
       
       // Artificial delay to make the transition feel intentional and smooth
       await new Promise(resolve => setTimeout(resolve, 800)); 

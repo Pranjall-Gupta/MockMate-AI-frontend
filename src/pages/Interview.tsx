@@ -3,6 +3,7 @@ import { Send, Bot, ArrowLeft, Mic, Square, RotateCw, Lightbulb, Award, Flame } 
 import { Link, useNavigate } from "react-router-dom";
 import RecordRTC, { StereoAudioRecorder } from "recordrtc";
 import VoiceMetricsCard, { VoiceMetrics } from "@/components/VoiceMetricsCard";
+import api from "@/lib/api";
 
 interface Message {
   type: "user" | "ai";
@@ -92,21 +93,15 @@ const Interview = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8081/api/interview/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedMessages),
-        signal: abortControllerRef.current.signal
-      });
-      const data = await response.json();
-      const score = extractScore(data.content);
+      const response = await api.post("/interview/chat", updatedMessages);
+      const score = extractScore(response.data.content);
       
       if (score > 0) {
         setSessionHistory(prev => [...prev, { q: currentQuestion, s: score }]);
         setQuestionCount(prev => prev + 1);
       }
 
-      processTurn(data.content, score);
+      processTurn(response.data.content, score);
     } catch (error: any) {
       if (error.name === 'AbortError') return;
       setMessages(prev => [...prev, { type: "ai", content: "The connection flickered. Please try again." }]);
@@ -172,8 +167,13 @@ const Interview = () => {
     formData.append("history", JSON.stringify(cleanedHistory));
 
     try {
-      const response = await fetch("http://localhost:8081/api/interview/submit", { method: "POST", body: formData });
-      const data = await response.json();
+      // Changed from fetch to api.post
+      const response = await api.post("/interview/submit", formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      const data = response.data;
       
       let finalMetrics: VoiceMetrics | undefined;
       if (data.metrics) {
@@ -206,6 +206,7 @@ const Interview = () => {
       setMessages(prev => [...prev, { type: "ai", content: "Voice processing failed. Please retry." }]);
     } finally { setIsLoading(false); }
   };
+
   const formatAIResponse = (text: string) => {
     return text.split('\n').map((line, index) => {
       const match = line.match(/^([A-Za-z\s]+:)(.*)/);

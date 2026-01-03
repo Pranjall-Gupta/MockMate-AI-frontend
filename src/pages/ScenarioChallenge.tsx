@@ -5,7 +5,7 @@ import {
   RotateCw, Lightbulb, XCircle, AlertTriangle, Sparkles 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
+import api from "@/lib/api";
 interface ScenarioData {
   title: string;
   description: string;
@@ -35,18 +35,13 @@ const ScenarioChallenge = () => {
     setUserAnswer("");
 
     try {
-      const response = await fetch("http://localhost:8081/api/interview/scenario", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: role }),
-      });
-
-      if (!response.ok) throw new Error("Server busy");
-      const data = await response.json();
-      const parsedScenario = JSON.parse(data.scenario);
+      const response = await api.post("/interview/scenario", { role: role });
+      const parsedScenario = typeof response.data.scenario === 'string'
+        ? JSON.parse(response.data.scenario)
+        : response.data.scenario;
       setScenario(parsedScenario);
     } catch (err) {
-      setError("AI is currently overloaded. Please try again.");
+      setError("AI is currently overloaded.");
     } finally {
       setIsLoading(false);
     }
