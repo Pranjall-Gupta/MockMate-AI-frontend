@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import api from "@/lib/api";
 import { 
   ArrowRight, 
   Github as GithubIcon, 
@@ -55,26 +56,23 @@ const Footer = ({ roadmapState, featuresState, systemState }) => {
 
     try {
       // Use port 8081 as per your application.properties
-      const response = await fetch("http://localhost:8081/api/waitlist/join", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
+      const response = await api.post("/waitlist/join", { email });
 
-      if (response.ok) {
-        toast.success("Welcome to the inner circle!", {
-          description: "You've been added to the MockMate AI waitlist.",
-          style: { background: "#0F172A", color: "#FACC15", border: "1px solid #FACC1533" }
-        });
-        setEmail(""); // Clear the input on success
-      } else {
-        const errorMsg = await response.text();
-        toast.error(errorMsg || "Already on the list!");
-      }
-    } catch (error) {
-      toast.error("Connection Error", {
-        description: "Please ensure your Spring Boot backend is running on port 8081."
+      toast.success("Welcome to the inner circle!", {
+        description: "You've been added to the MockMate AI waitlist.",
+        style: { background: "#0F172A", color: "#FACC15", border: "1px solid #FACC1533" }
       });
+      setEmail("");
+    } catch (error: any) {
+      const errorMsg = error.response?.data || "Already on the list!";
+      
+      if (error.code === 'ERR_NETWORK') {
+        toast.error("Connection Error", {
+          description: "Please ensure your Spring Boot backend is running on port 8081."
+        });
+      } else {
+        toast.error(errorMsg);
+      }
     } finally {
       setIsLoading(false);
     }
