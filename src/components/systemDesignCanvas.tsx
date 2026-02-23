@@ -2,6 +2,7 @@ import { useState, useImperativeHandle, forwardRef } from "react";
 import { Excalidraw, exportToBlob } from "@excalidraw/excalidraw";
 import { Brain, RefreshCcw } from "lucide-react";
 import GoldenGauge from "./GoldenGauge";
+import api from "@/lib/api";
 
 interface SystemDesignCanvasProps {
   challenge: string;
@@ -35,22 +36,20 @@ const SystemDesignCanvas = forwardRef(({ challenge, hideUI = false }: SystemDesi
       const blob = await exportToBlob({
         elements: excalidrawAPI.getSceneElements(),
         mimeType: "image/jpeg",
+        quality: 0.4,
         appState: { ...excalidrawAPI.getAppState(), exportWithDarkMode: true },
         files: excalidrawAPI.getFiles(),
       });
 
       const base64Image = await blobToBase64(blob);
-      const response = await fetch("http://localhost:8081/api/interview/analyze-design", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+      const response = await api.post("/interview/analyze-design", { 
           image: base64Image.split(",")[1],
           context: challenge 
-        }),
       });
 
-      const data = await response.json();
-      const rawFeedback = data.feedback || "";
+      // Since 'api' (axios) returns the data directly:
+      const rawFeedback = response.data.analysis; // Target the specific key
+      if (!rawFeedback) throw new Error("No analysis received from AI");
       setFeedback(rawFeedback);
 
       // Score extraction using regex
