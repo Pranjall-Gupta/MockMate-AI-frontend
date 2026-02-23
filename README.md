@@ -84,6 +84,8 @@ A multi-dimensional testing ground for production-grade problem solving, divided
 3. **AI Layer:** Direct integration with **Azure OpenAI Service** for LLM orchestration.
 4. **Data Layer:** Distributed NoSQL storage via **MongoDB Atlas**.
 
+> [!TIP]
+> **Backend logic** for this platform is hosted in a separate repository. Explore the Java/Spring Boot implementation here: [**MockMate-AI-Backend**](https://github.com/Pranjall-Gupta/MockMate-AI-Backend)
 ---
 ## ⚡ Performance & Optimization
 * **Latency Management**: Utilizes **Azure AI Speech** for **high-fidelity** transcription to ensure minimal processing overhead during live interactions.
