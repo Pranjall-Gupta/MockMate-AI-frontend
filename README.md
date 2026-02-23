@@ -49,15 +49,36 @@ A secure, persistence-layer for user onboarding.
 
 * **Architecture:** React frontend → Spring Boot API → MongoDB Atlas.
 
+### 📝 Resume Roaster & ATS Optimizer
+
+An AI-driven career strategist designed to transform standard CVs into high-impact, industry-aligned resumes.
+
+* **The Roast**: Brute-force critique of your resume structure, tone, and formatting.
+* **ATS Alignment**: Calculates a compatibility score against specific Job Descriptions (JDs) and identifies missing "Power Keywords."
+* **Verification Challenge**: Automatically generates two deep-dive technical questions based on your stated experience to ensure you can defend every bullet point in an interview.
+
+### 🕵️ Scenario-Based Intelligence (The Gauntlet)
+
+A multi-dimensional testing ground for production-grade problem solving, divided into three specialized tracks:
+
+* **Production Firefighter**: Diagnostic simulations where users must parse complex system logs to identify root causes of application failure—bridging the gap between raw data and resolution.
+* **Cloud Architect**: High-stakes scenarios focused on distributed systems, high availability (HA), disaster recovery, and cost-optimization within Azure infrastructure.
+* **Code Reviewer**: A rigorous evaluation module for identifying syntax errors, anti-patterns, and logical vulnerabilities in Java/Spring Boot codebases.
 ---
 
 ## 🏗️ System Architecture
+<p align="center">
+<img src="https://github.com/user-attachments/assets/413a6601-b94d-4d64-9996-a8658eef4508"  alt="MockMate AI System Architecture" width="700"/>
+</p>
 
 1. **Client:** Vite-powered React SPA with glass-morphism UI.
 2. **API Gateway:** Spring Boot REST API (Port 8081).
 3. **AI Layer:** Direct integration with **Azure OpenAI Service** for LLM orchestration.
 4. **Data Layer:** Distributed NoSQL storage via **MongoDB Atlas**.
 
+---
+## ⚡ Performance & Optimization
+* **Latency Management**: Utilizes **Azure AI Speech** for **high-fidelity** transcription to ensure minimal processing overhead during live interactions.
 ---
 
 ## 🚀 Getting Started
@@ -96,7 +117,10 @@ git clone https://github.com/Pranjall-Gupta/MockMate-AI.git
 * Start development server: `npm run dev`.
 
 
+---
+### 🛠️ Troubleshooting
 
+* **Netty Version Mismatch**: If you encounter Azure SDK warnings regarding Netty versions, ensure your Maven dependencies are aligned to 4.1.110.Final to match the Azure Core requirement.
 ---
 
 ## 👨‍💻 Developed By
@@ -104,7 +128,7 @@ git clone https://github.com/Pranjall-Gupta/MockMate-AI.git
 **Pranjal Gupta**
 
 * [Portfolio](https://pranjalgupta.dev)
-* [LinkedIn](https://www.linkedin.com/in/pranjal-gupta-4367052a0/)
+* [LinkedIn](https://www.linkedin.com/in/pranjal-gupta1369)
 * [LeetCode](https://leetcode.com/u/Pranjal__Gupta/)
 
 ---
