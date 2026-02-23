@@ -2,6 +2,8 @@
 
 **MockMate AI** is a precision-engineered, full-stack platform designed to bridge the gap between academic preparation and elite industry standards. Leveraging **Java 21**, **Spring Boot**, and **Azure AI**, it provides an immersive ecosystem for mastering high-stakes technical interviews.
 
+<p align="center"><img width="700" alt="Home Page" src="https://github.com/user-attachments/assets/dc1ad408-7400-4b6b-aede-37cbbff98381" /></p>
+
 ## 🛠️ Tech Stack
 
 | Layer | Technology |
@@ -30,24 +32,13 @@ Context-aware technical interviews powered by **Azure AI Speech**.
 
 * **Transcription:** High-fidelity speech-to-text conversion.
 * **Soft Skills Analysis:** AI-driven metrics for clarity, filler word detection, and tone.
-
-### 🏛️ System Design Canvas
-
-An interactive architecting tool for distributed systems.
-
-* **Vision Analysis:** AI-critique of architectural blueprints.
-* **Structural Reasoning:** Pattern validation for load balancing, caching, and microservices.
+  <p align="center">
+  <img src="https://github.com/user-attachments/assets/96ece887-10bd-4a9f-9ce9-c36242b6b0e5" alt="Speech Analysis" width="700"/></p>
 
 ### 🕵️ SQL Detective & Disaster Recovery
 
 * **SQL Gym:** Master schema design and query optimization.
 * **Production Firefighter:** Solve 150+ real-world Java/Azure infrastructure disasters.
-
-### 📋 Cloud-Synced Waitlist
-
-A secure, persistence-layer for user onboarding.
-
-* **Architecture:** React frontend → Spring Boot API → MongoDB Atlas.
 
 ### 📝 Resume Roaster & ATS Optimizer
 
@@ -56,6 +47,23 @@ An AI-driven career strategist designed to transform standard CVs into high-impa
 * **The Roast**: Brute-force critique of your resume structure, tone, and formatting.
 * **ATS Alignment**: Calculates a compatibility score against specific Job Descriptions (JDs) and identifies missing "Power Keywords."
 * **Verification Challenge**: Automatically generates two deep-dive technical questions based on your stated experience to ensure you can defend every bullet point in an interview.
+
+<p align="center"><img width="700" alt="resume roaster" src="https://github.com/user-attachments/assets/18305ac1-be5e-4a9d-a1de-9fd9ab4f310a" /></p>
+
+### 📋 Cloud-Synced Waitlist
+
+A secure, persistence-layer for user onboarding.
+
+* **Architecture:** React frontend → Spring Boot API → MongoDB Atlas.
+  
+### 🏛️ System Design Canvas
+
+An interactive architecting tool for distributed systems.
+
+* **Vision Analysis:** AI-critique of architectural blueprints.
+* **Structural Reasoning:** Pattern validation for load balancing, caching, and microservices.
+  
+<p align="center"><img width="700" alt="Mock Interview mode-sys design" src="https://github.com/user-attachments/assets/cc1e7cb1-6bf9-4620-8862-2b5d15a2a7cd" /></p>
 
 ### 🕵️ Scenario-Based Intelligence (The Gauntlet)
 
@@ -68,7 +76,7 @@ A multi-dimensional testing ground for production-grade problem solving, divided
 
 ## 🏗️ System Architecture
 <p align="center">
-<img src="https://github.com/user-attachments/assets/413a6601-b94d-4d64-9996-a8658eef4508"  alt="MockMate AI System Architecture" width="700"/>
+  <img width="700" alt="MockMate AI System Architecture" src="https://github.com/user-attachments/assets/5b842808-0c82-4301-82be-353404a6f7f6" />]
 </p>
 
 1. **Client:** Vite-powered React SPA with glass-morphism UI.
