@@ -2,6 +2,7 @@
 
 **MockMate AI** is a precision-engineered, full-stack platform designed to bridge the gap between academic preparation and elite industry standards. Leveraging **Java 21**, **Spring Boot**, and **Azure AI**, it provides an immersive ecosystem for mastering high-stakes technical interviews.
 
+
 <p align="center"><img width="700" alt="Home Page" src="https://github.com/user-attachments/assets/dc1ad408-7400-4b6b-aede-37cbbff98381" /></p>
 
 ## 🛠️ Tech Stack
