@@ -138,7 +138,6 @@ git clone https://github.com/Pranjall-Gupta/MockMate-AI.git
 
 **Pranjal Gupta**
 
-* [Portfolio](https://pranjalgupta.dev)
 * [LinkedIn](https://www.linkedin.com/in/pranjal-gupta1369)
 * [LeetCode](https://leetcode.com/u/Pranjal__Gupta/)
 
