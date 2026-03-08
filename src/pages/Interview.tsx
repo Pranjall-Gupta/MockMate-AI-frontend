@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { Send, Bot, ArrowLeft, Mic, Square, RotateCw, Lightbulb, Award, Flame } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
-import RecordRTC, { StereoAudioRecorder } from "recordrtc";
+import { Send, Bot, ArrowLeft, Mic, Square, Lightbulb, Award, Flame } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import VoiceMetricsCard, { VoiceMetrics } from "@/components/VoiceMetricsCard";
 import api from "@/lib/api";
+import * as SpeechSDK from "microsoft-cognitiveservices-speech-sdk";
 
 interface Message {
   type: "user" | "ai";
@@ -18,11 +18,10 @@ const Interview = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingStart, setRecordingStart] = useState<number>(0);
-  
-  // --- REFS (Now safely inside the component) ---
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const recorderRef = useRef<RecordRTC | null>(null);
+  const [liveTranscript, setLiveTranscript] = useState(""); 
   const streamRef = useRef<MediaStream | null>(null);
+  const recognizerRef = useRef<SpeechSDK.SpeechRecognizer | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // --- Session State ---
@@ -33,18 +32,33 @@ const Interview = () => {
   const [showReport, setShowReport] = useState(false);
   const [sessionHistory, setSessionHistory] = useState<{q: string, s: number}[]>([]);
   const [streak, setStreak] = useState(0);
-
+  const transcriptRef = useRef("");
   const MAX_QUESTIONS = 5; 
   const [suggestions, setSuggestions] = useState<string[]>(["Java", "DSA", "System Design"]);
-
   const [messages, setMessages] = useState<Message[]>([
     { type: "ai", content: "Welcome to the Assessment Center. To begin, please choose a core topic." }
   ]);
+  const azureTokenCustom = useRef<{token: string, region: string} | null>(null);
 
+  const totalSilenceRef = useRef<number>(0);
+  const lastActiveTimeRef = useRef<number>(0);
+  const clarityScoresRef = useRef<number[]>([]);
+
+
+  useEffect(() => {
+      // Pre-fetch token so it's ready when they hit the Mic
+      api.get("/interview/token").then(res => {
+          azureTokenCustom.current = res.data;
+      });
+  }, []);
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
       if (abortControllerRef.current) abortControllerRef.current.abort();
+      if (recognizerRef.current) {
+        recognizerRef.current.stopContinuousRecognitionAsync();
+        recognizerRef.current.close();
+      }
     };
   }, []);
 
@@ -53,37 +67,39 @@ const Interview = () => {
     return match ? parseInt(match[1]) : 0;
   };
 
-  const startInactivityTimer = () => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-        handleSend("I'm struggling to frame my thoughts. Can you give me a structural hint?");
-    }, 120000); 
-  };
-
   const handleSend = async (forcedInput?: string) => {
     const textToSend = forcedInput || input;
     if (!textToSend.trim()) return;
 
     if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = new AbortController();
-    if (timerRef.current) clearTimeout(timerRef.current);
-
-    // Topic/Difficulty Logic
+    
     if (!selectedTopic && ["java", "dsa", "system design"].includes(textToSend.toLowerCase())) {
         setSelectedTopic(textToSend);
-        setSuggestions(["Easy Mode", "Medium Mode", "Hard Mode", "Adaptive Mode"]);
-        setMessages(prev => [...prev, { type: "user", content: textToSend }, { type: "ai", content: `Excellent. Select your difficulty for ${textToSend}.` }]);
+        
+        // Create Specialized suggestions
+        let dynamicSubs = ["Easy Mode", "Hard Mode", "Adaptive Mode"];
+        if (textToSend.toLowerCase() === "java") dynamicSubs.unshift("JVM & Memory", "Concurrency");
+        if (textToSend.toLowerCase() === "dsa") dynamicSubs.unshift("Complexity Analysis", "Data Structure Selection");
+        if (textToSend.toLowerCase() === "system design") dynamicSubs.unshift("High Availability", "Scalability Patterns");
+
+        setSuggestions(dynamicSubs);
+        setMessages(prev => [
+            ...prev, 
+            { type: "user", content: textToSend }, 
+            { type: "ai", content: `Excellent. Select your difficulty for ${textToSend}, or pick a specific focus area to start deep.` }
+        ]);
         setInput("");
         return; 
     }
-    if (selectedTopic && !sessionStarted && (textToSend.toLowerCase().includes("mode") || textToSend.toLowerCase().includes("adaptive"))) {
-        setDifficulty(textToSend);
-        setSessionStarted(true);
+    const isStartingSelection = suggestions.includes(textToSend) || textToSend.toLowerCase().includes("mode");
+
+    if(selectedTopic && !sessionStarted && isStartingSelection) {
+      setDifficulty(textToSend);
+      setSessionStarted(true);
     }
 
-    // --- IMPROVED QUESTION CAPTURE ---
     const rawQuestion = messages.slice().reverse().find(m => m.type === "ai")?.content || "Technical Question";
-    // This regex removes the previous score/feedback from the question for a clean report
     const currentQuestion = rawQuestion.split(/Next question:|Next question/i).pop()?.trim() || rawQuestion;
 
     const userMessage: Message = { type: "user", content: textToSend };
@@ -95,115 +111,149 @@ const Interview = () => {
     try {
       const response = await api.post("/interview/chat", updatedMessages);
       const score = extractScore(response.data.content);
-      
-      if (score > 0) {
-        setSessionHistory(prev => [...prev, { q: currentQuestion, s: score }]);
-        setQuestionCount(prev => prev + 1);
-      }
 
-      processTurn(response.data.content, score);
+      processTurn(response.data.content, score, currentQuestion);
     } catch (error: any) {
       if (error.name === 'AbortError') return;
-      setMessages(prev => [...prev, { type: "ai", content: "The connection flickered. Please try again." }]);
+      setMessages(prev => [...prev, { type: "ai", content: "Connection error. Try again." }]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const processTurn = (aiContent: string, score: number, metrics?: VoiceMetrics) => {
+  const processTurn = (aiContent: string, score: number, currentQuestion: string, metrics?: VoiceMetrics) => {
     if (score >= 7) setStreak(prev => prev + 1);
     else if (score > 0) setStreak(0);
-
+    let nextCount = questionCount;
+    if (score > 0) {
+        setSessionHistory(prev => [...prev, { q: currentQuestion, s: score }]);
+        setQuestionCount(prev =>{
+            nextCount = prev + 1; 
+            return nextCount;
+        });
+    }
     setMessages(prev => [...prev, { type: "ai", content: aiContent, score, metrics }]);
-
-    if (questionCount >= MAX_QUESTIONS - 1 && score > 0) {
-      setSuggestions(["Generate Final Report", "Change Topic"]);
-    } else {
-      setSuggestions(["Next Question", "Give me a Hint", "Change Topic"]);
-      startInactivityTimer();
-    }
+    setSuggestions(nextCount >= MAX_QUESTIONS - 1 ? ["Generate Final Report", "Change Topic"] : ["Next Question", "Give me a Hint", "Change Topic"]);
   };
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      const recorder = new RecordRTC(stream, { type: 'audio', mimeType: 'audio/wav', recorderType: StereoAudioRecorder, numberOfAudioChannels: 1, desiredSampRate: 16000 });
-      recorder.startRecording();
-      recorderRef.current = recorder;
-      setRecordingStart(Date.now());
+const startRecording = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    streamRef.current = stream; 
+    
+    const token = azureTokenCustom.current?.token;
+    const region = azureTokenCustom.current?.region;
+    
+    const speechConfig = SpeechSDK.SpeechConfig.fromAuthorizationToken(token!, region!);
+    speechConfig.speechRecognitionLanguage = "en-US";
+    
+    // --- CRITICAL: UNLOCK DETAILED METRICS ---
+    speechConfig.outputFormat = SpeechSDK.OutputFormat.Detailed;
+    // This helps prevent Azure from automatically cleaning up "ums" and "uhs"
+    speechConfig.setServiceProperty("speechServiceResponse_PostProcessingOption", "TrueText", 1000 as any);
+
+    const audioConfig = SpeechSDK.AudioConfig.fromStreamInput(stream);
+    const recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
+    recognizerRef.current = recognizer;
+
+    // Reset trackers
+    totalSilenceRef.current = 0;
+    lastActiveTimeRef.current = Date.now();
+    clarityScoresRef.current = [];
+    let finalizedText = ""; 
+
+    recognizer.recognizing = (s, e) => {
+      // Track Silence: If the gap since last activity > 1s, start counting it
+      const now = Date.now();
+      const gap = (now - lastActiveTimeRef.current) / 1000;
+      if (gap > 1.2) {
+        totalSilenceRef.current += gap;
+      }
+      lastActiveTimeRef.current = now;
+
+      const current = (finalizedText + " " + e.result.text).trim();
+      setLiveTranscript(current);
+      transcriptRef.current = current;
+    };
+
+    recognizer.recognized = (s, e) => {
+      if (e.result.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
+        // --- CAPTURE CLARITY (Confidence Score) ---
+        const json = JSON.parse(e.result.json);
+        if (json.NBest && json.NBest[0]) {
+           // Azure confidence is 0.0 to 1.0, we store it for averaging
+           clarityScoresRef.current.push(json.NBest[0].Confidence * 100);
+        }
+
+        finalizedText += " " + e.result.text;
+        transcriptRef.current = finalizedText.trim();
+        setLiveTranscript(finalizedText.trim());
+      }
+    };
+
+    recognizer.startContinuousRecognitionAsync(() => {
       setIsRecording(true);
-    } catch (err) { alert("Mic access denied."); }
-  };
+      setRecordingStart(Date.now());
+    });
+  } catch (err) { console.error(err); }
+};
 
-  const stopRecording = () => {
-    if (recorderRef.current && isRecording) {
-      setIsRecording(false);
-      recorderRef.current.stopRecording(() => {
-        const audioBlob = recorderRef.current!.getBlob();
-        if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
-        handleVoiceUpload(audioBlob);
-      });
+const stopRecording = () => {
+  if (recognizerRef.current) {
+    const finalGap = (Date.now() - lastActiveTimeRef.current) / 1000;
+    if (finalGap > 1.2) {
+      totalSilenceRef.current += finalGap;
     }
-  };
+    const finalSpeech = transcriptRef.current.trim();
+    console.log("Captured at stop:", finalSpeech);
 
-  const handleVoiceUpload = async (audioBlob: Blob) => {
-    if (audioBlob.size < 1000) {
-        setMessages(prev => [...prev, { type: "ai", content: "I couldn't hear anything. Please check your microphone." }]);
+    recognizerRef.current.stopContinuousRecognitionAsync(() => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+
+      setIsRecording(false);
+      setLiveTranscript("");
+      handleSpeechSubmission(finalSpeech); // Submit the captured text
+
+      recognizerRef.current?.close();
+      recognizerRef.current = null;
+    });
+  }
+};
+
+  const handleSpeechSubmission = async (transcript: string) => {
+    if (!transcript.trim()) {
+        console.warn("Empty transcript. Ignoring.");
         return;
     }
-    
     setIsLoading(true);
-    setMessages(prev => [...prev, { type: "user", content: "🎤 (Processing Speech...)" }]);
-    
-    // --- IMPROVED QUESTION CAPTURE ---
     const rawQuestion = messages.slice().reverse().find(m => m.type === "ai")?.content || "Technical Question";
     const currentQuestion = rawQuestion.split(/Next question:|Next question/i).pop()?.trim() || rawQuestion;
-
-    const cleanedHistory = messages.map(msg => ({ type: msg.type, content: msg.content }));
-    const formData = new FormData();
-    formData.append("audio", audioBlob, "recording.wav");
-    formData.append("duration", ((Date.now() - recordingStart) / 1000).toString());
-    formData.append("history", JSON.stringify(cleanedHistory));
+    const duration = (Date.now() - recordingStart) / 1000;
+    const roundedSilence = parseFloat(totalSilenceRef.current.toFixed(3));
+    const avgClarity = clarityScoresRef.current.length > 0 
+      ? clarityScoresRef.current.reduce((a, b) => a + b) / clarityScoresRef.current.length 
+      : 0;
+    setMessages(prev => [...prev, { type: "user", content: "🎤 " + transcript }]);
 
     try {
-      // Changed from fetch to api.post
-      const response = await api.post("/interview/submit", formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      const data = response.data;
-      
-      let finalMetrics: VoiceMetrics | undefined;
-      if (data.metrics) {
-          finalMetrics = {
-              wpm: data.metrics.wpm,
-              fillers: data.metrics.fillers,
-              pauseDuration: data.metrics.pauseDuration || 0,
-              tone: data.metrics.tone,
-              clarityScore: data.metrics.clarityScore,
-              feedback: data.metrics.feedback
-          };
-      }
+        console.log("Submitting to /submit-hybrid...");
+        const response = await api.post("/interview/submit-hybrid", {
+            transcript,
+            duration,
+            pauseDuration: roundedSilence,
+            clarityScore: Math.round(avgClarity), 
+            history: messages.map(m => ({ type: m.type, content: m.content }))
+        });
 
-      const score = extractScore(data.feedback);
-      
-      setMessages(prev => {
-        const newMsgs = [...prev];
-        newMsgs[newMsgs.length - 1] = { type: "user", content: "🎤 " + data.transcript };
-        return [...newMsgs, { type: "ai", content: data.feedback, score, metrics: finalMetrics }];
-      });
-
-      if (score > 0) {
-        setSessionHistory(prev => [...prev, { q: currentQuestion, s: score }]); 
-        setQuestionCount(prev => prev + 1);
-      }
-      
-      setSuggestions(["Next Question", "Give me a Hint", "Change Topic"]);
-      startInactivityTimer();
+        const { feedback, metrics } = response.data;
+        const score = extractScore(feedback);
+        
+        processTurn(feedback, score,currentQuestion, metrics);
     } catch (error) {
-      setMessages(prev => [...prev, { type: "ai", content: "Voice processing failed. Please retry." }]);
+        console.error("Submission to backend failed:", error);
     } finally { setIsLoading(false); }
   };
 
@@ -215,14 +265,14 @@ const Interview = () => {
     });
   };
 
-  // --- REPORT CARD UI ---
+  // --- REPORT CARD UI (Now being used) ---
   const ReportCard = () => {
     const avgScore = sessionHistory.length > 0 ? (sessionHistory.reduce((acc, curr) => acc + curr.s, 0) / sessionHistory.length).toFixed(1) : 0;
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/95 backdrop-blur-md p-4 animate-in fade-in">
             <div className="bg-card border border-primary/20 w-full max-w-2xl rounded-3xl p-8 shadow-2xl">
                 <div className="flex justify-between items-start mb-8">
-                    <div><h2 className="font-serif text-3xl text-gradient-gold mb-2 uppercase">Session Report</h2><p className="text-muted-foreground text-sm">Reviewing your performance in {selectedTopic}.</p></div>
+                    <div><h2 className="font-serif text-3xl text-gradient-gold mb-2 uppercase">Session Report</h2><p className="text-muted-foreground text-sm">Reviewing performance in {selectedTopic}.</p></div>
                     <div className="bg-primary/10 p-4 rounded-2xl border border-primary/20 text-center"><span className="block text-[10px] uppercase font-bold text-primary tracking-widest">Avg Rating</span><span className="text-3xl font-serif text-primary">{avgScore}/10</span></div>
                 </div>
                 <div className="space-y-4 mb-10 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
@@ -230,7 +280,10 @@ const Interview = () => {
                         <div key={i} className="p-4 bg-white/5 rounded-xl border border-white/5"><div className="flex justify-between mb-2"><span className="text-[10px] font-bold text-primary uppercase">Case {i+1}</span><span className="text-xs font-bold text-primary">{item.s}/10</span></div><p className="text-xs text-foreground/70 truncate mb-3">{item.q}</p><div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-primary" style={{ width: `${item.s * 10}%` }} /></div></div>
                     ))}
                 </div>
-                <div className="grid grid-cols-2 gap-4"><button onClick={() => window.location.reload()} className="p-4 rounded-2xl bg-white/5 border border-white/10 text-xs font-bold uppercase tracking-widest hover:bg-white/10">Reset</button><button onClick={() => navigate("/")} className="p-4 rounded-2xl bg-primary text-primary-foreground text-xs font-bold uppercase tracking-widest">Exit</button></div>
+                <div className="grid grid-cols-2 gap-4">
+                    <button onClick={() => window.location.reload()} className="p-4 rounded-2xl bg-white/5 border border-white/10 text-xs font-bold uppercase tracking-widest">Reset</button>
+                    <button onClick={() => navigate("/")} className="p-4 rounded-2xl bg-primary text-primary-foreground text-xs font-bold uppercase tracking-widest">Exit</button>
+                </div>
             </div>
         </div>
     );
@@ -239,15 +292,18 @@ const Interview = () => {
   return (
     <div className="min-h-screen bg-background text-foreground font-sans flex flex-col overflow-hidden">
       {showReport && <ReportCard />}
+      
       <header className="border-b border-border p-4 bg-background/80 backdrop-blur-md z-10">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <button onClick={() => setShowReport(true)} className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"><ArrowLeft size={16} /> <span className="text-xs font-bold uppercase tracking-widest">EXIT</span></button>
+          <button onClick={() => setShowReport(true)} className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
+            <ArrowLeft size={16} /> <span className="text-xs font-bold uppercase tracking-widest">EXIT</span>
+          </button>
           <div className="flex items-center gap-6">
-              {streak > 0 && <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-primary/30 bg-primary/5 transition-all duration-500" style={{ boxShadow: `0 0 ${Math.min(streak * 8, 30)}px rgba(212, 175, 55, 0.4)` }}><Flame size={14} className={streak >= 3 ? "text-orange-500 fill-orange-500 animate-pulse" : "text-primary"} /><span className="text-[10px] font-bold text-primary uppercase">{streak} Streak</span></div>}
-              {sessionStarted && <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-primary/5 border border-primary/20 rounded-full"><span className="text-[10px] text-primary font-bold uppercase">{difficulty}</span><div className="w-1 h-1 rounded-full bg-primary animate-pulse" /><span className="text-[10px] text-primary/70 font-mono">Q: {questionCount}/{MAX_QUESTIONS}</span></div>}
+              {streak > 0 && <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-primary/30 bg-primary/5"><Flame size={14} className="text-primary" /><span className="text-[10px] font-bold text-primary uppercase">{streak} Streak</span></div>}
+              {sessionStarted && <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-primary/5 border border-primary/20 rounded-full"><span className="text-[10px] text-primary font-bold uppercase">{difficulty}</span> <span className="text-[10px] text-primary/70 font-mono">Q: {questionCount}/{MAX_QUESTIONS}</span></div>}
               <span className="font-serif text-lg tracking-[0.2em] uppercase text-gradient-gold">MockMate</span>
           </div>
-          <div className="w-8" /> {/* Placeholder for balance */}
+          <div className="w-8" />
         </div>
       </header>
 
@@ -260,16 +316,27 @@ const Interview = () => {
                 {msg.type === "ai" ? formatAIResponse(msg.content) : msg.content}
               </div>
             </div>
-            {msg.metrics && <div className="w-full max-w-[85%] ml-11 animate-in slide-in-from-left-2"><VoiceMetricsCard metrics={msg.metrics} /></div>}
+            {msg.metrics && <div className="w-full max-w-[85%] ml-11"><VoiceMetricsCard metrics={msg.metrics} /></div>}
           </div>
         ))}
-        {isLoading && <div className="text-primary/50 text-[10px] font-mono ml-12 animate-pulse tracking-widest uppercase">Analyzing Intelligence...</div>}
+        
+        {isRecording && (
+            <div className="flex justify-end animate-in fade-in slide-in-from-right-2">
+                <div className="bg-primary/20 border border-primary/30 p-4 rounded-2xl text-sm italic text-foreground/80 max-w-[85%]">
+                    <span className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                        {liveTranscript.length > 0 ? liveTranscript : "Listening..."}
+                    </span>
+                </div>
+            </div>
+        )}
+        {isLoading && <div className="text-primary/50 text-[10px] font-mono ml-12 animate-pulse uppercase tracking-widest">Processing Intelligence...</div>}
       </main>
 
       <div className="p-4 border-t border-border bg-background">
         <div className="max-w-4xl mx-auto">
             {!isLoading && !isRecording && input.length === 0 && (
-                <div className="flex gap-2 mb-4 animate-in slide-in-from-bottom-2 overflow-x-auto no-scrollbar pb-1">
+                <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar pb-1">
                     {suggestions.map((suggestion) => (
                         <button key={suggestion} onClick={() => suggestion === "Generate Final Report" ? setShowReport(true) : handleSend(suggestion)} className="whitespace-nowrap px-4 py-1.5 rounded-full border border-primary/20 bg-primary/5 text-primary text-[10px] font-bold uppercase tracking-widest hover:bg-primary/10 transition-all flex items-center gap-2">
                             {suggestion.includes("Report") ? <Award size={12} /> : <Lightbulb size={12} />} {suggestion}
