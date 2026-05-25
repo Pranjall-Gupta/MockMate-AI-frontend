@@ -346,7 +346,7 @@ const Footer = ({ roadmapState, featuresState, systemState }) => {
                     <h5 className="text-[10px] font-bold uppercase tracking-widest text-white">{m.phase}: {m.title}</h5>
                     <span className="text-[9px] font-mono text-yellow-500/50 uppercase">{m.status}</span>
                   </div>
-                  <ul className="grid grid-cols-2 gap-2">
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {m.items.map((item, idx) => (
                       <li key={idx} className="text-[11px] text-muted-foreground flex items-center gap-2">
                         <span className="w-1 h-1 bg-yellow-500/30 rounded-full" /> {item}

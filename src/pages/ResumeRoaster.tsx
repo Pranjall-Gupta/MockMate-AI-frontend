@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 import { 
   ArrowLeft, 
   FileText, 
@@ -25,16 +26,33 @@ interface ResumeAnalysis {
 }
 
 const ResumeRoaster = () => {
+  const { isLoggedIn } = useAuth();
   const [resumeText, setResumeText] = useState("");
   const [jdText, setJdText] = useState(""); 
   const [analysis, setAnalysis] = useState<ResumeAnalysis | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [history, setHistory] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<"roast" | "history">("roast");
   
   // EVALUATION STATES
   const [practiceQuestion, setPracticeQuestion] = useState<string | null>(null);
   const [userAnswer, setUserAnswer] = useState("");
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [evalResult, setEvalResult] = useState<{grade: number, feedback: string, idealAnswer: string} | null>(null);
+
+  const fetchHistory = async () => {
+    if (!isLoggedIn) return;
+    try {
+      const response = await api.get("/interview/resume/history");
+      setHistory(response.data || []);
+    } catch (err) {
+      console.error("Failed to load resume roast history", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchHistory();
+  }, [isLoggedIn]);
 
   const handleAnalyze = async () => {
     if (!resumeText.trim()) return;
@@ -55,6 +73,7 @@ const ResumeRoaster = () => {
         }
         
         setAnalysis(JSON.parse(rawJson));
+        fetchHistory();
     } catch (error) {
         alert("Roaster is offline or returned invalid data.");
     } finally {
@@ -160,7 +179,35 @@ const ResumeRoaster = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full max-w-6xl">
         <div className="lg:col-span-5 space-y-6">
-            <div className="bg-[#121212] border border-white/10 rounded-[2rem] p-8 shadow-2xl">
+          {isLoggedIn && (
+            <div className="flex gap-2 p-1.5 bg-[#121212]/80 border border-white/5 rounded-2xl shadow-xl backdrop-blur-md">
+              <button
+                onClick={() => setActiveTab("roast")}
+                className={`flex-1 py-3 px-4 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 select-none outline-none ${
+                  activeTab === "roast" 
+                    ? "bg-white text-black shadow-lg" 
+                    : "text-muted-foreground hover:text-white"
+                }`}
+              >
+                <Flame size={12} />
+                Roast Area
+              </button>
+              <button
+                onClick={() => setActiveTab("history")}
+                className={`flex-1 py-3 px-4 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 select-none outline-none ${
+                  activeTab === "history" 
+                    ? "bg-white text-black shadow-lg" 
+                    : "text-muted-foreground hover:text-white"
+                }`}
+              >
+                <FileText size={12} />
+                Past Roasts ({history.length})
+              </button>
+            </div>
+          )}
+
+          {activeTab === "roast" ? (
+            <div className="bg-[#121212] border border-white/10 rounded-[2rem] p-8 shadow-2xl animate-in fade-in duration-300">
                 <div className="flex items-center gap-2 mb-4 text-gold">
                     <FileText size={18} />
                     <h2 className="text-xs font-bold uppercase tracking-widest">Resume Content</h2>
@@ -189,6 +236,73 @@ const ResumeRoaster = () => {
                     {isLoading ? "Roasting..." : <>Ignite Roaster <Flame size={16} /></>}
                 </button>
             </div>
+          ) : (
+            <div className="bg-[#121212] border border-white/10 rounded-[2rem] p-8 shadow-2xl animate-in fade-in duration-300 space-y-4 max-h-[630px] overflow-y-auto custom-scrollbar">
+              <div className="flex items-center gap-2 mb-4 text-gold">
+                <FileText size={18} />
+                <h2 className="text-xs font-bold uppercase tracking-widest">Historical Roasts</h2>
+              </div>
+              
+              {history.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <p className="text-xs italic">No past roasts discovered in your terminal logs.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {history.map((audit) => {
+                    const formattedDate = new Date(audit.createdAt || Date.now()).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric"
+                    });
+                    
+                    // Extract a clean role or title from job description or fallback to "General Roast"
+                    const roleTitle = audit.jobDescription 
+                      ? audit.jobDescription.split("\n")[0].trim().replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, "") || "General Resume Roast"
+                      : "General Resume Roast";
+                    
+                    return (
+                      <button
+                        key={audit.id}
+                        onClick={() => {
+                          setResumeText(audit.resumeText || "");
+                          setJdText(audit.jobDescription || "");
+                          setAnalysis({
+                            score: audit.score || 0,
+                            roast: audit.roast || "",
+                            redFlags: audit.redFlags || [],
+                            missingKeywords: audit.missingKeywords || [],
+                            bulletPointFixes: audit.bulletPointFixes || [],
+                            hardQuestions: audit.hardQuestions || []
+                          });
+                          setActiveTab("roast");
+                        }}
+                        className="w-full text-left p-5 rounded-2xl border border-white/5 bg-white/[0.01] hover:border-yellow-500/30 hover:bg-white/[0.03] transition-all group flex flex-col gap-2 relative overflow-hidden"
+                      >
+                        {/* Filament gold edge on hover */}
+                        <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-yellow-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        
+                        <div className="flex justify-between items-center w-full">
+                          <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest">
+                            {formattedDate}
+                          </span>
+                          <span className="text-[9px] font-bold text-yellow-500 bg-yellow-500/10 px-2.5 py-1 rounded-full border border-yellow-500/20">
+                            Score: {audit.score}/10
+                          </span>
+                        </div>
+                        <h3 className="text-xs font-bold text-white group-hover:text-yellow-500 transition-colors line-clamp-1">
+                          {roleTitle}
+                        </h3>
+                        <p className="text-[10px] text-gray-400 line-clamp-2 leading-relaxed italic">
+                          "{audit.roast}"
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="lg:col-span-7 flex flex-col gap-6">

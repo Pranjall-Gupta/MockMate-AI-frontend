@@ -77,7 +77,7 @@ A multi-dimensional testing ground for production-grade problem solving, divided
 
 ## 🏗️ System Architecture
 <p align="center">
-  <img width="700" alt="MockMate AI System Architecture" src="https://github.com/user-attachments/assets/5b842808-0c82-4301-82be-353404a6f7f6" />]
+  <img width="700" alt="MockMate AI System Architecture" src="https://github.com/user-attachments/assets/5b842808-0c82-4301-82be-353404a6f7f6" />
 </p>
 
 1. **Client:** Vite-powered React SPA with glass-morphism UI.

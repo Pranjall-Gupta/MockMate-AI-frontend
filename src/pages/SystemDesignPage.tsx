@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion"; // Added AnimatePresence
 import { ArrowLeft, LayoutGrid, MessageSquare, Database, ShoppingBag, Terminal, AlertTriangle, X, Brain, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -21,6 +21,20 @@ const SystemDesignPage = () => {
   const [isMockMode, setIsMockMode] = useState(false);
   const [activeDisaster, setActiveDisaster] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false); // Track loading state for transition
+  const [direction, setDirection] = useState<"horizontal" | "vertical">("horizontal");
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setDirection("vertical");
+      } else {
+        setDirection("horizontal");
+      }
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const startInterview = async () => {
     setIsLoading(true); // Start loading animation
@@ -135,7 +149,7 @@ const SystemDesignPage = () => {
               transition={{ duration: 0.5, ease: "circOut" }}
               className="h-full w-full"
             >
-              <PanelGroup direction="horizontal" className="gap-3">
+              <PanelGroup direction={direction} className="gap-3">
                 {/* COLUMN 1: DISASTER BRIEFING */}
                 <Panel defaultSize={25} minSize={20}>
                   <div className="h-full bg-red-950/10 border border-red-500/20 rounded-[2rem] p-6 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
@@ -161,14 +175,14 @@ const SystemDesignPage = () => {
                   </div>
                 </Panel>
 
-                <PanelResizeHandle className="w-1 hover:bg-white/20 transition-colors bg-white/5 rounded-full mx-1" />
+                <PanelResizeHandle className={`${direction === 'horizontal' ? 'w-1 cursor-col-resize mx-1' : 'h-1 w-full cursor-row-resize my-1'} hover:bg-white/20 transition-colors bg-white/5 rounded-full`} />
 
                 {/* COLUMN 2: CANVAS */}
                 <Panel defaultSize={50} minSize={30}>
                   <SystemDesignCanvas ref={canvasRef} challenge={activeChallenge} hideUI={true} />
                 </Panel>
 
-                <PanelResizeHandle className="w-1 hover:bg-white/20 transition-colors bg-white/5 rounded-full mx-1" />
+                <PanelResizeHandle className={`${direction === 'horizontal' ? 'w-1 cursor-col-resize mx-1' : 'h-1 w-full cursor-row-resize my-1'} hover:bg-white/20 transition-colors bg-white/5 rounded-full`} />
 
                 {/* COLUMN 3: CONTROLS */}
                 <Panel defaultSize={25} minSize={20}>

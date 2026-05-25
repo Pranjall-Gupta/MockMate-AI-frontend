@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Send, Bot, ArrowLeft, Mic, Square, Lightbulb, Award, Flame } from "lucide-react";
+import { Send, Bot, ArrowLeft, Mic, Square, Lightbulb, Award, Flame, Volume2, VolumeX } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import VoiceMetricsCard, { VoiceMetrics } from "@/components/VoiceMetricsCard";
 import api from "@/lib/api";
@@ -43,6 +43,68 @@ const Interview = () => {
   const totalSilenceRef = useRef<number>(0);
   const lastActiveTimeRef = useRef<number>(0);
   const clarityScoresRef = useRef<number[]>([]);
+
+  // --- Voice Feedback State & Helpers ---
+  const [voiceEnabled, setVoiceEnabled] = useState(() => localStorage.getItem("mockmate-voice-enabled") === "true");
+  const activeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [sessionSaved, setSessionSaved] = useState(false);
+
+  const cleanTextForSpeech = (text: string): string => {
+    // 1. Strip "Score: X/10" at the very top
+    let cleaned = text.replace(/Score:\s*\d+\/10/gi, "").trim();
+    // 2. Strip section markers to make the voice flow naturally
+    cleaned = cleaned.replace(/\b(Logic|Next question|Feedback|Ideal Answer):\s*/gi, "");
+    // 3. Remove markdown markers
+    cleaned = cleaned.replace(/[*#_`~]/g, "");
+    // 4. Convert newlines to sentence pauses
+    cleaned = cleaned.replace(/\n+/g, ". ");
+    return cleaned.trim();
+  };
+
+  const playSpeech = async (text: string, force = false) => {
+    if (!voiceEnabled && !force) return;
+    try {
+      // Interrupt any current audio playback to avoid voice overlap
+      if (activeAudioRef.current) {
+        activeAudioRef.current.pause();
+        activeAudioRef.current = null;
+      }
+
+      const cleaned = cleanTextForSpeech(text);
+      if (!cleaned) return;
+
+      const response = await api.get(`/interview/speak`, {
+        params: { text: cleaned },
+        responseType: 'blob'
+      });
+
+      const blobUrl = URL.createObjectURL(response.data);
+      const audio = new Audio(blobUrl);
+      activeAudioRef.current = audio;
+      audio.play().catch(e => console.warn("Autoplay blocked or playback interrupted:", e));
+    } catch (error) {
+      console.error("Failed to play speech:", error);
+    }
+  };
+
+  const handleOpenReport = async () => {
+    setShowReport(true);
+    // Only save if there is actual history (at least 1 question graded) and not already saved
+    if (sessionHistory.length > 0 && !sessionSaved) {
+      try {
+        const avgScore = sessionHistory.reduce((acc, curr) => acc + curr.s, 0) / sessionHistory.length;
+        await api.post("/interview/session/save", {
+          topic: selectedTopic || "General",
+          difficulty: difficulty || "Medium",
+          averageScore: parseFloat(avgScore.toFixed(2)),
+          messages: messages.map(m => ({ type: m.type, content: m.content }))
+        });
+        setSessionSaved(true);
+      } catch (error) {
+        console.error("Failed to persist session to MongoDB Atlas:", error);
+      }
+    }
+  };
 
 
   useEffect(() => {
@@ -134,10 +196,19 @@ const Interview = () => {
     }
     setMessages(prev => [...prev, { type: "ai", content: aiContent, score, metrics }]);
     setSuggestions(nextCount >= MAX_QUESTIONS - 1 ? ["Generate Final Report", "Change Topic"] : ["Next Question", "Give me a Hint", "Change Topic"]);
+    
+    // Play the AI's question/response out loud
+    playSpeech(aiContent);
   };
 
 const startRecording = async () => {
   try {
+    // Interrupt any currently playing AI audio so it doesn't feed back into the mic
+    if (activeAudioRef.current) {
+      activeAudioRef.current.pause();
+      activeAudioRef.current = null;
+    }
+
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     streamRef.current = stream; 
     
@@ -290,12 +361,12 @@ const stopRecording = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans flex flex-col overflow-hidden">
+    <div className="h-screen bg-background text-foreground font-sans flex flex-col overflow-hidden">
       {showReport && <ReportCard />}
       
       <header className="border-b border-border p-4 bg-background/80 backdrop-blur-md z-10">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <button onClick={() => setShowReport(true)} className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
+          <button onClick={handleOpenReport} className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
             <ArrowLeft size={16} /> <span className="text-xs font-bold uppercase tracking-widest">EXIT</span>
           </button>
           <div className="flex items-center gap-6">
@@ -303,17 +374,44 @@ const stopRecording = () => {
               {sessionStarted && <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-primary/5 border border-primary/20 rounded-full"><span className="text-[10px] text-primary font-bold uppercase">{difficulty}</span> <span className="text-[10px] text-primary/70 font-mono">Q: {questionCount}/{MAX_QUESTIONS}</span></div>}
               <span className="font-serif text-lg tracking-[0.2em] uppercase text-gradient-gold">MockMate</span>
           </div>
-          <div className="w-8" />
+          <button 
+            onClick={() => {
+              const nextVal = !voiceEnabled;
+              if (voiceEnabled) {
+                if (activeAudioRef.current) {
+                  activeAudioRef.current.pause();
+                  activeAudioRef.current = null;
+                }
+              }
+              setVoiceEnabled(nextVal);
+              localStorage.setItem("mockmate-voice-enabled", String(nextVal));
+            }} 
+            className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors p-2 rounded-full border border-white/5 bg-white/5 hover:bg-white/10"
+            title={voiceEnabled ? "Mute Voice Feedback" : "Unmute Voice Feedback"}
+          >
+            {voiceEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+          </button>
         </div>
       </header>
 
       <main className="flex-1 max-w-4xl w-full mx-auto p-4 flex flex-col gap-6 overflow-y-auto custom-scrollbar">
         {messages.map((msg, index) => (
           <div key={index} className={`flex flex-col gap-2 ${msg.type === "user" ? "items-end" : "items-start"}`}>
-            <div className={`flex gap-3 max-w-[85%] ${msg.type === "user" ? "flex-row-reverse" : "flex-row"}`}>
+            <div className={`flex gap-3 max-w-[85%] ${msg.type === "user" ? "flex-row-reverse" : "flex-row"} group/bubble`}>
               {msg.type === "ai" && <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0"><Bot size={16} className="text-primary" /></div>}
-              <div className={`p-4 rounded-2xl text-sm leading-relaxed ${msg.type === "user" ? "bg-primary text-primary-foreground font-medium shadow-lg" : "bg-card border border-border text-foreground shadow-sm"}`}>
-                {msg.type === "ai" ? formatAIResponse(msg.content) : msg.content}
+              <div className="relative flex items-center gap-2">
+                <div className={`p-4 rounded-2xl text-sm leading-relaxed ${msg.type === "user" ? "bg-primary text-primary-foreground font-medium shadow-lg" : "bg-card border border-border text-foreground shadow-sm"}`}>
+                  {msg.type === "ai" ? formatAIResponse(msg.content) : msg.content}
+                </div>
+                {msg.type === "ai" && (
+                  <button 
+                    onClick={() => playSpeech(msg.content, true)}
+                    className="p-2 opacity-0 group-hover/bubble:opacity-100 hover:text-primary hover:bg-white/5 transition-all duration-300 text-muted-foreground self-center shrink-0 rounded-full"
+                    title="Read Out Loud"
+                  >
+                    <Volume2 size={14} />
+                  </button>
+                )}
               </div>
             </div>
             {msg.metrics && <div className="w-full max-w-[85%] ml-11"><VoiceMetricsCard metrics={msg.metrics} /></div>}
@@ -338,7 +436,7 @@ const stopRecording = () => {
             {!isLoading && !isRecording && input.length === 0 && (
                 <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar pb-1">
                     {suggestions.map((suggestion) => (
-                        <button key={suggestion} onClick={() => suggestion === "Generate Final Report" ? setShowReport(true) : handleSend(suggestion)} className="whitespace-nowrap px-4 py-1.5 rounded-full border border-primary/20 bg-primary/5 text-primary text-[10px] font-bold uppercase tracking-widest hover:bg-primary/10 transition-all flex items-center gap-2">
+                        <button key={suggestion} onClick={() => suggestion === "Generate Final Report" ? handleOpenReport() : handleSend(suggestion)} className="whitespace-nowrap px-4 py-1.5 rounded-full border border-primary/20 bg-primary/5 text-primary text-[10px] font-bold uppercase tracking-widest hover:bg-primary/10 transition-all flex items-center gap-2">
                             {suggestion.includes("Report") ? <Award size={12} /> : <Lightbulb size={12} />} {suggestion}
                         </button>
                     ))}

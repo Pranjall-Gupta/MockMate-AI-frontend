@@ -218,6 +218,40 @@ const ScenarioChallenge = () => {
             </div>
         </div>
         )}
+        {/* --- STATE 3: ERROR CARD --- */}
+        {error && !isLoading && (
+          <div className="w-full max-w-md mx-auto mt-10 bg-black/40 border border-red-500/20 rounded-[2rem] p-8 text-center backdrop-blur-xl animate-in zoom-in-95 relative overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-red-500/25 to-transparent" />
+            
+            <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-red-500/5">
+              <AlertTriangle className="text-red-500" size={20} />
+            </div>
+            
+            <h3 className="text-white font-serif text-lg mb-2">Simulation Failure</h3>
+            <p className="text-gray-400 text-xs leading-relaxed mb-6">
+              {error}
+              <br />
+              <span className="text-[10px] text-muted-foreground mt-2 block font-mono">
+                Reason: The AI model generated an invalid format or could not connect. Check your Spring Boot environment variables (<code className="text-yellow-500 font-bold select-all">AZURE_OPENAI_KEY</code>).
+              </span>
+            </p>
+            
+            <div className="flex gap-3">
+              <button 
+                onClick={handleCancel} 
+                className="flex-1 py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-[9px] font-bold uppercase tracking-widest text-muted-foreground hover:text-white transition-colors"
+              >
+                Lobby
+              </button>
+              <button 
+                onClick={() => currentRole && generateScenario(currentRole)} 
+                className="flex-1 py-3 px-4 rounded-xl bg-red-500/10 border border-red-500/30 text-[9px] font-bold uppercase tracking-widest text-red-400 hover:bg-red-500/20 transition-all"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* --- STATE 4: GAMEPLAY (The Immersive Card) --- */}
         {scenario && !isLoading && !error && (

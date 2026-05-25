@@ -32,6 +32,21 @@ const SQLDetective = () => {
   const [attempts, setAttempts] = useState(0);
   const [showSolution, setShowSolution] = useState(false);
 
+  const [direction, setDirection] = useState<"horizontal" | "vertical">("horizontal");
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setDirection("vertical");
+      } else {
+        setDirection("horizontal");
+      }
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   useEffect(() => { loadMystery(); }, []);
 
   const loadMystery = async () => {
@@ -60,7 +75,8 @@ const SQLDetective = () => {
       const response = await api.post("/interview/sql/solve", { 
           mission: mystery.mission, 
           query: userQuery,
-          solution: mystery.solution 
+          solution: mystery.solution,
+          schema: mystery.schema // Pass dynamic schema setup script for real H2 execution
       });
       const data = response.data;
       const result = typeof data.result === 'string' ? JSON.parse(data.result) : data.result;
@@ -147,10 +163,39 @@ const SQLDetective = () => {
         </div>
       )}
 
+      {/* ERROR CARD OVERLAY */}
+      {!isLoading && !mystery && error && (
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-red-950/20 via-slate-950 to-slate-950">
+          <div className="glass rounded-[2rem] p-10 border border-red-500/20 max-w-md w-full relative overflow-hidden backdrop-blur-xl animate-in zoom-in-95 duration-500">
+            <div className="absolute top-0 left-1/4 right-1/4 h-[1px] bg-gradient-to-r from-transparent via-red-500/30 to-transparent" />
+            
+            <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-red-500/5">
+              <AlertCircle className="text-red-400 w-6 h-6 animate-pulse" />
+            </div>
+            
+            <h2 className="font-serif text-xl text-red-400 mb-3 uppercase tracking-widest">Case Files Encrypted</h2>
+            <p className="text-blue-200/60 text-xs leading-relaxed mb-8">
+              The case database is unresponsive. 
+              <br />
+              <span className="text-[10px] text-muted-foreground mt-2 block font-mono">
+                Reason: The AI model is recharging or offline. Verify that <code className="text-yellow-500 font-bold">AZURE_OPENAI_KEY</code> is correctly set in your Spring Boot backend configuration.
+              </span>
+            </p>
+            
+            <button 
+              onClick={loadMystery} 
+              className="w-full bg-blue-900/30 border border-primary/20 hover:bg-primary/20 text-primary font-bold py-4 rounded-2xl text-[10px] uppercase tracking-widest transition-all"
+            >
+              Retry Decryption
+            </button>
+          </div>
+        </div>
+      )}
+
       {!isLoading && mystery && (
         // UPDATED: Main background with a subtle top-down blue gradient blend
         <main className="flex-1 overflow-hidden p-3 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/20 via-slate-950 to-slate-950">
-          <PanelGroup direction="horizontal" className="gap-3">
+          <PanelGroup direction={direction} className="gap-3">
             
             {/* COLUMN 1: CASE BRIEFING (Dark Navy Glass) */}
             <Panel defaultSize={25} minSize={20}>
@@ -210,7 +255,7 @@ const SQLDetective = () => {
               </section>
             </Panel>
 
-            <PanelResizeHandle className="w-1 hover:bg-primary/50 transition-colors rounded-full bg-blue-900/50" />
+            <PanelResizeHandle className={`${direction === 'horizontal' ? 'w-1 cursor-col-resize' : 'h-1 w-full cursor-row-resize'} hover:bg-primary/50 transition-colors rounded-full bg-blue-900/50 my-1`} />
 
             {/* COLUMN 2: SQL TERMINAL (Darker, Deeper Blue/Black) */}
             <Panel defaultSize={50} minSize={30}>
@@ -245,7 +290,7 @@ const SQLDetective = () => {
               </section>
             </Panel>
 
-            <PanelResizeHandle className="w-1 hover:bg-primary/50 transition-colors rounded-full bg-blue-900/50" />
+            <PanelResizeHandle className={`${direction === 'horizontal' ? 'w-1 cursor-col-resize' : 'h-1 w-full cursor-row-resize'} hover:bg-primary/50 transition-colors rounded-full bg-blue-900/50 my-1`} />
 
             {/* COLUMN 3: SCHEMA REFERENCE (Dark Navy Glass) */}
             <Panel defaultSize={25} minSize={20}>

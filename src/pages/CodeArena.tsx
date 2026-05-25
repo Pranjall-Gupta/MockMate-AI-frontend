@@ -69,6 +69,21 @@ const CodeArena = () => {
     }
   };
 
+  const [direction, setDirection] = useState<"horizontal" | "vertical">("horizontal");
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setDirection("vertical");
+      } else {
+        setDirection("horizontal");
+      }
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   useEffect(() => {
     if (!question) {
       fetchNewQuestion();
@@ -94,6 +109,42 @@ const CodeArena = () => {
         <Loader2 className="animate-spin text-primary" size={40} />
       </div>
     );
+
+  if (!loading && !question) {
+    return (
+      <div className="min-h-screen bg-[#050505] text-white flex flex-col items-center justify-center p-6 text-center">
+        <div className="glass rounded-[2rem] p-10 border border-red-500/20 max-w-md w-full relative overflow-hidden backdrop-blur-xl animate-in zoom-in-95">
+          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-red-500/25 to-transparent" />
+          
+          <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-red-500/5">
+            <Cpu className="text-red-400 w-6 h-6 animate-pulse" />
+          </div>
+          
+          <h2 className="font-serif text-xl text-red-400 mb-3 uppercase tracking-widest font-bold">Judge System Offline</h2>
+          <p className="text-gray-400 text-xs leading-relaxed mb-8">
+            The Algorithm Arena judge could not generate a challenge. Please check your backend's environment variables (like <code className="text-yellow-500 font-bold select-all">AZURE_OPENAI_KEY</code>).
+          </p>
+          
+          <div className="flex gap-3">
+            <Link to="/" className="flex-1">
+              <Button 
+                variant="outline"
+                className="w-full rounded-xl py-6 hover:bg-white/5 uppercase tracking-widest text-[9px] border-white/10"
+              >
+                Return HQ
+              </Button>
+            </Link>
+            <Button 
+              onClick={fetchNewQuestion}
+              className="flex-1 bg-[#C4A484] text-black hover:bg-[#b08e6b] rounded-xl py-6 uppercase tracking-widest text-[9px] font-bold"
+            >
+              Retry Load
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#050505] text-white pt-28 overflow-x-hidden">
@@ -126,7 +177,7 @@ const CodeArena = () => {
 
       {/* MAIN CONTENT AREA WITH ADJUSTABLE PANELS */}
       <div className="max-w-[1600px] mx-auto px-6 h-[calc(100vh-140px)]">
-        <PanelGroup direction="horizontal">
+        <PanelGroup direction={direction}>
           {/* LEFT PANEL: PROBLEM */}
           <Panel defaultSize={40} minSize={30}>
             <div className="h-full pr-4 overflow-y-auto custom-scrollbar overflow-x-hidden">
@@ -192,7 +243,7 @@ const CodeArena = () => {
             </div>
           </Panel>
 
-          <PanelResizeHandle className="w-1 bg-transparent hover:bg-primary/20 transition-colors cursor-col-resize mx-2 rounded-full" />
+          <PanelResizeHandle className={`${direction === 'horizontal' ? 'w-1 cursor-col-resize mx-2' : 'h-1 w-full cursor-row-resize my-2'} bg-transparent hover:bg-primary/20 transition-colors rounded-full`} />
 
           {/* RIGHT PANEL: EDITOR & RESULTS */}
           <Panel defaultSize={60}>
