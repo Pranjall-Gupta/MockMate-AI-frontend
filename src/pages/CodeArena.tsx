@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import Editor from "@monaco-editor/react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Timer, Send, ArrowRight, Code2, Loader2, Sparkles, ChevronDown, Lightbulb, Lock ,Cpu,Layers,XIcon} from "lucide-react";
@@ -260,12 +261,27 @@ const CodeArena = () => {
                     )}
                   </div>
                 </div>
-                <textarea
-                  className="flex-1 bg-transparent p-8 font-mono text-sm text-white outline-none resize-none leading-relaxed selection:bg-primary/30"
-                  value={code}
-                  spellCheck={false}
-                  onChange={(e) => setCode(e.target.value)}
-                />
+                <div className="flex-1 w-full bg-[#1e1e1e] p-2">
+                  <Editor
+                    height="100%"
+                    language="java"
+                    theme="vs-dark"
+                    value={code}
+                    onChange={(val) => setCode(val || "")}
+                    options={{
+                      fontSize: 14,
+                      minimap: { enabled: false },
+                      automaticLayout: true,
+                      scrollBeyondLastLine: false,
+                      lineNumbers: "on",
+                      folding: true,
+                      tabSize: 4,
+                      wordWrap: "on",
+                      cursorBlinking: "smooth",
+                      fontFamily: "Fira Code, monospace",
+                    }}
+                  />
+                </div>
               </div>
 
               {/* EVALUATION RESULTS PANEL */}

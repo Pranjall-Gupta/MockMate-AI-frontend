@@ -49,6 +49,72 @@ const Interview = () => {
   const activeAudioRef = useRef<HTMLAudioElement | null>(null);
   const [sessionSaved, setSessionSaved] = useState(false);
 
+  // --- AI Reactive Avatar State & Audio Wave ---
+  const [avatarState, setAvatarState] = useState<"IDLE" | "LISTENING" | "THINKING" | "SPEAKING">("IDLE");
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const animationFrameIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (isLoading) {
+      setAvatarState("THINKING");
+    } else if (isRecording) {
+      setAvatarState("LISTENING");
+    } else if (isSpeaking) {
+      setAvatarState("SPEAKING");
+    } else {
+      setAvatarState("IDLE");
+    }
+  }, [isLoading, isRecording, isSpeaking]);
+
+  const drawWave = () => {
+    if (!canvasRef.current || !analyserRef.current) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    
+    const bufferLength = analyserRef.current.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    
+    const draw = () => {
+      if (!analyserRef.current || !canvasRef.current) return;
+      animationFrameIdRef.current = requestAnimationFrame(draw);
+      
+      analyserRef.current.getByteTimeDomainData(dataArray);
+      
+      ctx.fillStyle = "rgba(10, 10, 10, 0.4)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "#FACC15";
+      ctx.beginPath();
+      
+      const sliceWidth = canvas.width / bufferLength;
+      let x = 0;
+      
+      for (let i = 0; i < bufferLength; i++) {
+        const v = dataArray[i] / 128.0;
+        const y = (v * canvas.height) / 2;
+        
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+        
+        x += sliceWidth;
+      }
+      
+      ctx.lineTo(canvas.width, canvas.height / 2);
+      ctx.stroke();
+    };
+    
+    draw();
+  };
+
   const cleanTextForSpeech = (text: string): string => {
     // 1. Strip "Score: X/10" at the very top
     let cleaned = text.replace(/Score:\s*\d+\/10/gi, "").trim();
@@ -68,6 +134,7 @@ const Interview = () => {
       if (activeAudioRef.current) {
         activeAudioRef.current.pause();
         activeAudioRef.current = null;
+        setIsSpeaking(false);
       }
 
       const cleaned = cleanTextForSpeech(text);
@@ -81,9 +148,16 @@ const Interview = () => {
       const blobUrl = URL.createObjectURL(response.data);
       const audio = new Audio(blobUrl);
       activeAudioRef.current = audio;
-      audio.play().catch(e => console.warn("Autoplay blocked or playback interrupted:", e));
+      audio.onplay = () => setIsSpeaking(true);
+      audio.onended = () => setIsSpeaking(false);
+      audio.onpause = () => setIsSpeaking(false);
+      audio.play().catch(e => {
+        console.warn("Autoplay blocked or playback interrupted:", e);
+        setIsSpeaking(false);
+      });
     } catch (error) {
       console.error("Failed to play speech:", error);
+      setIsSpeaking(false);
     }
   };
 
@@ -171,7 +245,15 @@ const Interview = () => {
     setIsLoading(true);
 
     try {
-      const response = await api.post("/interview/chat", updatedMessages);
+      const tone = localStorage.getItem("mockmate-ai-tone") || "Socratic Inquirer";
+      const difficultySetting = localStorage.getItem("mockmate-ai-difficulty") || "L5: Senior Engineer";
+      
+      const response = await api.post("/interview/chat", updatedMessages, {
+        headers: {
+          "X-MockMate-Tone": tone,
+          "X-MockMate-Difficulty": difficultySetting
+        }
+      });
       const score = extractScore(response.data.content);
 
       processTurn(response.data.content, score, currentQuestion);
@@ -211,6 +293,22 @@ const startRecording = async () => {
 
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     streamRef.current = stream; 
+
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const analyser = audioContext.createAnalyser();
+      const source = audioContext.createMediaStreamSource(stream);
+      source.connect(analyser);
+      analyser.fftSize = 256;
+      
+      audioContextRef.current = audioContext;
+      analyserRef.current = analyser;
+      setTimeout(() => {
+        drawWave();
+      }, 100);
+    } catch (audioErr) {
+      console.warn("Failed to initialize AudioContext for visualizer:", audioErr);
+    } 
     
     const token = azureTokenCustom.current?.token;
     const region = azureTokenCustom.current?.region;
@@ -279,6 +377,16 @@ const stopRecording = () => {
     console.log("Captured at stop:", finalSpeech);
 
     recognizerRef.current.stopContinuousRecognitionAsync(() => {
+      if (animationFrameIdRef.current) {
+        cancelAnimationFrame(animationFrameIdRef.current);
+        animationFrameIdRef.current = null;
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
+      analyserRef.current = null;
+
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
@@ -311,12 +419,20 @@ const stopRecording = () => {
 
     try {
         console.log("Submitting to /submit-hybrid...");
+        const tone = localStorage.getItem("mockmate-ai-tone") || "Socratic Inquirer";
+        const difficultySetting = localStorage.getItem("mockmate-ai-difficulty") || "L5: Senior Engineer";
+
         const response = await api.post("/interview/submit-hybrid", {
             transcript,
             duration,
             pauseDuration: roundedSilence,
             clarityScore: Math.round(avgClarity), 
             history: messages.map(m => ({ type: m.type, content: m.content }))
+        }, {
+            headers: {
+                "X-MockMate-Tone": tone,
+                "X-MockMate-Difficulty": difficultySetting
+            }
         });
 
         const { feedback, metrics } = response.data;
@@ -364,6 +480,40 @@ const stopRecording = () => {
     <div className="h-screen bg-background text-foreground font-sans flex flex-col overflow-hidden">
       {showReport && <ReportCard />}
       
+      {/* 0. LOCAL CYBERNETIC ANIMATIONS SHEET */}
+      <style>{`
+        @keyframes equalizer1 {
+          0%, 100% { transform: scaleY(0.4); }
+          50% { transform: scaleY(1.8); }
+        }
+        @keyframes equalizer2 {
+          0%, 100% { transform: scaleY(0.5); }
+          50% { transform: scaleY(1.4); }
+        }
+        @keyframes equalizer3 {
+          0%, 100% { transform: scaleY(0.3); }
+          50% { transform: scaleY(2.2); }
+        }
+        .animate-equalizer-1 {
+          animation: equalizer1 0.6s ease-in-out infinite;
+          transform-origin: 50% 50px;
+        }
+        .animate-equalizer-2 {
+          animation: equalizer2 0.5s ease-in-out infinite;
+          transform-origin: 50% 50px;
+        }
+        .animate-equalizer-3 {
+          animation: equalizer3 0.7s ease-in-out infinite;
+          transform-origin: 50% 50px;
+        }
+        .animate-spin-slow {
+          animation: spin 20s linear infinite;
+        }
+        .animate-reverse-spin {
+          animation: spin 15s linear infinite reverse;
+        }
+      `}</style>
+      
       <header className="border-b border-border p-4 bg-background/80 backdrop-blur-md z-10">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <button onClick={handleOpenReport} className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
@@ -394,7 +544,68 @@ const stopRecording = () => {
         </div>
       </header>
 
-      <main className="flex-1 max-w-4xl w-full mx-auto p-4 flex flex-col gap-6 overflow-y-auto custom-scrollbar">
+      <main className="flex-1 max-w-4xl w-full mx-auto p-4 flex flex-col h-full overflow-hidden">
+        {/* Integrated Floating Cybernetic Hologram Core (Centered at the top of the chat panel) */}
+        <div className="flex flex-col items-center justify-center mb-6 pb-4 border-b border-white/5 shrink-0 bg-[#0c0c0c]/40 backdrop-blur-md py-3 px-6 rounded-3xl border border-white/5">
+          <div className="flex items-center gap-4 w-full justify-between">
+            {/* Status Info */}
+            <div className="flex items-center gap-3">
+              {/* Spinning outer ring and reactive inner core */}
+              <div className="relative w-12 h-12 flex items-center justify-center shrink-0">
+                <div className={`absolute inset-0 rounded-full border border-dashed border-primary/20 animate-spin-slow ${avatarState === "THINKING" ? "border-primary/60 scale-105" : ""}`} style={{ animationDuration: "12s" }} />
+                <div className={`absolute inset-1 rounded-full border border-primary/10 animate-reverse-spin ${avatarState === "SPEAKING" ? "scale-95 border-yellow-500/30" : ""}`} style={{ animationDuration: "8s" }} />
+                <div className="absolute inset-2 rounded-full bg-black/40 border border-white/5 flex items-center justify-center shadow-inner">
+                  <svg className="w-full h-full p-1" viewBox="0 0 100 100">
+                    {avatarState === "IDLE" && (
+                      <circle cx="50" cy="50" r="16" className="fill-primary/20 stroke-primary stroke-[2] animate-pulse" />
+                    )}
+                    {avatarState === "LISTENING" && (
+                      <>
+                        <circle cx="50" cy="50" r="10" className="fill-none stroke-red-500 stroke-[1.5] animate-ping" />
+                        <circle cx="50" cy="50" r="20" className="fill-none stroke-red-500/50 stroke-[1] animate-pulse" />
+                      </>
+                    )}
+                    {avatarState === "THINKING" && (
+                      <path d="M 30,50 A 20,20 0 1,1 70,50" className="fill-none stroke-yellow-500 stroke-[3] stroke-linecap-round animate-spin" />
+                    )}
+                    {avatarState === "SPEAKING" && (
+                      <g className="stroke-yellow-500 stroke-[3] stroke-linecap-round">
+                        <line x1="30" y1="50" x2="30" y2="40" className="animate-equalizer-1" />
+                        <line x1="40" y1="50" x2="40" y2="35" className="animate-equalizer-2" />
+                        <line x1="50" y1="50" x2="50" y2="25" className="animate-equalizer-3" />
+                        <line x1="60" y1="50" x2="60" y2="35" className="animate-equalizer-2" />
+                        <line x1="70" y1="50" x2="70" y2="40" className="animate-equalizer-1" />
+                      </g>
+                    )}
+                  </svg>
+                </div>
+              </div>
+              
+              <div className="flex flex-col text-left">
+                <span className="text-[9px] text-primary/70 font-bold uppercase tracking-[0.25em] font-mono">
+                  AI Logic Core Status
+                </span>
+                <span className={`text-xs font-serif font-bold uppercase tracking-widest ${avatarState === "SPEAKING" ? "text-yellow-500 animate-pulse" : avatarState === "LISTENING" ? "text-red-500 animate-pulse" : "text-white"}`}>
+                  {avatarState === "IDLE" && "Core Idle: Ready"}
+                  {avatarState === "LISTENING" && "Capture: Listening"}
+                  {avatarState === "THINKING" && "Logic: Processing"}
+                  {avatarState === "SPEAKING" && "Voice: Transmitting"}
+                </span>
+              </div>
+            </div>
+
+            {/* Micro details */}
+            <p className="hidden md:block text-[10px] text-muted-foreground max-w-[280px] text-right leading-relaxed font-mono">
+              {avatarState === "IDLE" && "System is standing by. Speak or choose a suggestion to begin."}
+              {avatarState === "LISTENING" && "Receiving voice stream. Speak clearly into your mic device."}
+              {avatarState === "THINKING" && "Analyzing technical answers and soft-skill metrics in the cloud."}
+              {avatarState === "SPEAKING" && "Synthesizing vocal response models through local audio channels."}
+            </p>
+          </div>
+        </div>
+
+        {/* Chat messages panel */}
+        <div className="flex-1 flex flex-col h-full overflow-y-auto pr-2 custom-scrollbar gap-6">
         {messages.map((msg, index) => (
           <div key={index} className={`flex flex-col gap-2 ${msg.type === "user" ? "items-end" : "items-start"}`}>
             <div className={`flex gap-3 max-w-[85%] ${msg.type === "user" ? "flex-row-reverse" : "flex-row"} group/bubble`}>
@@ -429,6 +640,7 @@ const stopRecording = () => {
             </div>
         )}
         {isLoading && <div className="text-primary/50 text-[10px] font-mono ml-12 animate-pulse uppercase tracking-widest">Processing Intelligence...</div>}
+        </div>
       </main>
 
       <div className="p-4 border-t border-border bg-background">
@@ -443,9 +655,29 @@ const stopRecording = () => {
                 </div>
             )}
             <div className="flex gap-3 relative">
-                <button onClick={isRecording ? stopRecording : startRecording} className={`p-4 rounded-2xl transition-all shadow-lg ${isRecording ? "bg-red-500 text-white animate-pulse" : "bg-card text-foreground border border-border hover:border-primary/50"}`}>
-                    {isRecording ? <Square size={20} fill="currentColor" /> : <Mic size={20} />}
-                </button>
+                {isRecording ? (
+                  <button 
+                    onClick={stopRecording} 
+                    className="relative w-14 h-14 bg-red-950/20 border border-red-500/50 rounded-2xl overflow-hidden hover:bg-red-900/30 transition-all flex items-center justify-center group cursor-pointer shrink-0"
+                    title="Stop Recording"
+                  >
+                    <canvas 
+                      ref={canvasRef} 
+                      className="absolute inset-0 w-full h-full pointer-events-none" 
+                      width={56} 
+                      height={56} 
+                    />
+                    <Square size={14} className="text-red-500 relative z-10 animate-pulse group-hover:scale-110 transition-transform" fill="currentColor" />
+                  </button>
+                ) : (
+                  <button 
+                    onClick={startRecording} 
+                    className="p-4 rounded-2xl bg-card text-foreground border border-border hover:border-primary/50 hover:scale-105 active:scale-95 transition-all shadow-lg shrink-0"
+                    title="Start Recording"
+                  >
+                    <Mic size={20} />
+                  </button>
+                )}
                 <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSend()} disabled={isLoading || isRecording} placeholder={isRecording ? "Listening..." : "Type your response..."} className="flex-1 bg-card border border-border rounded-2xl px-6 text-sm text-foreground focus:outline-none focus:border-primary transition-all shadow-sm" />
                 <button onClick={() => handleSend()} disabled={isLoading || isRecording || !input.trim()} className="bg-primary text-primary-foreground px-6 py-4 rounded-2xl font-bold hover:opacity-90 transition disabled:opacity-20 shadow-lg shadow-primary/20">
                     <Send size={20} />

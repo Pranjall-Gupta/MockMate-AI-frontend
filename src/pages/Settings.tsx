@@ -81,6 +81,19 @@ const Settings = () => {
   const [activePersona, setActivePersona] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  const [simulatorTone, setSimulatorTone] = useState(() => localStorage.getItem("mockmate-ai-tone") || "Socratic Inquirer");
+  const [simulatorDifficulty, setSimulatorDifficulty] = useState(() => localStorage.getItem("mockmate-ai-difficulty") || "L5: Senior Engineer");
+
+  const handleToneChange = (tone: string) => {
+    setSimulatorTone(tone);
+    localStorage.setItem("mockmate-ai-tone", tone);
+  };
+
+  const handleDifficultyChange = (difficulty: string) => {
+    setSimulatorDifficulty(difficulty);
+    localStorage.setItem("mockmate-ai-difficulty", difficulty);
+  };
+
   useEffect(() => {
     if (userData) {
       setDisplayName(userData.name || "");
@@ -267,6 +280,92 @@ const Settings = () => {
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          {/* AI Simulator Protocol Config */}
+          <div className="glass border border-white/5 rounded-[2rem] p-8 shadow-2xl space-y-6">
+            <div className="flex items-center gap-3 text-yellow-500">
+              <Cpu size={18} />
+              <h2 className="text-xs font-bold uppercase tracking-widest">Classified AI Simulator Protocol</h2>
+            </div>
+            
+            <div className="space-y-6">
+              {/* Interviewer Tone Selection */}
+              <div className="space-y-3">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground block">
+                  Interviewer Persona Tone
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {[
+                    { id: "Friendly Mentor", desc: "Warm & encouraging" },
+                    { id: "Socratic Inquirer", desc: "Assumption-challenging" },
+                    { id: "High-Stress Stress Test", desc: "Intense FAANG-grilling" }
+                  ].map((t) => {
+                    const isSelected = simulatorTone === t.id;
+                    const toneGlow = t.id.includes("Stress") ? "rgba(239,68,68,0.15)" : "rgba(245,158,11,0.2)";
+                    const activeBorder = t.id.includes("Stress") ? "border-red-500/40" : "border-yellow-500/40";
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => handleToneChange(t.id)}
+                        className={`text-left p-4 rounded-xl border transition-all text-xs flex flex-col justify-between ${
+                          isSelected 
+                            ? `${activeBorder} bg-white/[0.03] shadow-lg` 
+                            : "border-white/5 bg-transparent hover:border-white/10 hover:bg-white/[0.01]"
+                        }`}
+                        style={{
+                          boxShadow: isSelected ? `0 0 15px ${toneGlow}` : "none"
+                        }}
+                      >
+                        <span className={`font-bold block mb-1 ${isSelected ? (t.id.includes("Stress") ? "text-red-400" : "text-yellow-500") : "text-white"}`}>
+                          {t.id}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground leading-tight">
+                          {t.desc}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Career Difficulty Tier Selection */}
+              <div className="space-y-3">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground block">
+                  Target Career Difficulty
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {[
+                    { id: "L3: Associate (Junior)", desc: "Syntax & Correctness" },
+                    { id: "L5: Senior Engineer", desc: "Optimization & trade-offs" },
+                    { id: "L7: Principal Architect", desc: "Multi-region scale & CAP" }
+                  ].map((d) => {
+                    const isSelected = simulatorDifficulty === d.id;
+                    return (
+                      <button
+                        key={d.id}
+                        onClick={() => handleDifficultyChange(d.id)}
+                        className={`text-left p-4 rounded-xl border transition-all text-xs flex flex-col justify-between ${
+                          isSelected 
+                            ? "border-yellow-500/40 bg-white/[0.03] shadow-lg" 
+                            : "border-white/5 bg-transparent hover:border-white/10 hover:bg-white/[0.01]"
+                        }`}
+                        style={{
+                          boxShadow: isSelected ? "0 0 15px rgba(245,158,11,0.2)" : "none"
+                        }}
+                      >
+                        <span className={`font-bold block mb-1 ${isSelected ? "text-yellow-500" : "text-white"}`}>
+                          {d.id.split(":")[0]}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground leading-tight">
+                          {d.desc}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -22,6 +22,7 @@ const SystemDesignPage = () => {
   const [activeDisaster, setActiveDisaster] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false); // Track loading state for transition
   const [direction, setDirection] = useState<"horizontal" | "vertical">("horizontal");
+  const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -85,6 +86,13 @@ const SystemDesignPage = () => {
             >
               Audit Checklist
             </button>
+            
+            <button 
+              onClick={() => setIsTemplatesOpen(true)}
+              className="px-4 py-1.5 border border-yellow-500/30 rounded-full text-[10px] font-bold text-yellow-500 hover:bg-yellow-500/10 transition-all uppercase tracking-widest ml-2"
+            >
+              Blueprint Drawer
+            </button>
           </div>
 
           <AnimatePresence mode="wait">
@@ -137,7 +145,7 @@ const SystemDesignPage = () => {
               transition={{ duration: 0.4, ease: "easeInOut" }}
               className="h-full w-full"
             >
-              <SystemDesignCanvas challenge={activeChallenge} hideUI={false} />
+              <SystemDesignCanvas ref={canvasRef} challenge={activeChallenge} hideUI={false} />
             </motion.div>
           ) : (
             /* MOCK MODE - Slide Up / Scale In */
@@ -223,6 +231,68 @@ const SystemDesignPage = () => {
         onClose={() => setIsSolutionOpen(false)} 
         challenge={activeChallenge} 
       />
+
+      {/* BLUEPRINTS DRAWER - Slide In */}
+      <AnimatePresence>
+        {isTemplatesOpen && (
+          <div className="fixed inset-0 z-50 flex justify-end" onClick={() => setIsTemplatesOpen(false)}>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-xs"
+            />
+            
+            <motion.div 
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-sm h-full bg-[#0a0a0a] border-l border-white/10 p-6 flex flex-col gap-6 shadow-2xl z-10"
+            >
+              <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                <div className="flex items-center gap-2 text-yellow-500">
+                  <LayoutGrid size={18} />
+                  <span className="text-xs font-bold uppercase tracking-widest">Blueprint Templates</span>
+                </div>
+                <button onClick={() => setIsTemplatesOpen(false)} className="text-gray-500 hover:text-white transition-colors">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="flex-1 space-y-4 overflow-y-auto custom-scrollbar">
+                {[
+                  { id: "three-tier", title: "Three-Tier Web App", desc: "Classic Load Balancer -> Scaled Web Nodes -> Redis -> Primary-replica DB.", icon: <LayoutGrid className="text-yellow-500" size={18} /> },
+                  { id: "kafka", title: "Event Streams (Kafka)", desc: "Producers publishing event batches to broker clusters read by Consumers.", icon: <Database className="text-yellow-500" size={18} /> },
+                  { id: "cdn", title: "Global CDN Caching", desc: "Edge-DNS geo-routing client requests to Edge CDNs with origin failbacks.", icon: <ShoppingBag className="text-yellow-500" size={18} /> }
+                ].map((tpl) => (
+                  <button
+                    key={tpl.id}
+                    onClick={() => {
+                      canvasRef.current?.loadTemplate(tpl.id);
+                      setIsTemplatesOpen(false);
+                    }}
+                    className="w-full text-left p-5 rounded-2xl border border-white/5 bg-white/[0.01] hover:border-yellow-500/25 hover:bg-yellow-500/[0.02] transition-all group flex gap-4"
+                  >
+                    <div className="shrink-0 p-3 rounded-xl bg-white/5 border border-white/10 group-hover:scale-105 transition-transform flex items-center justify-center h-fit">
+                      {tpl.icon}
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white mb-1 group-hover:text-yellow-500 transition-colors uppercase tracking-widest">{tpl.title}</h4>
+                      <p className="text-[10px] text-gray-400 leading-normal">{tpl.desc}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="border-t border-white/5 pt-4 text-center">
+                <p className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em]">Select preset to populate board</p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
