@@ -444,11 +444,73 @@ const stopRecording = () => {
     } finally { setIsLoading(false); }
   };
 
+  const parseInlineMarkdown = (text: string) => {
+    const parts = text.split("**");
+    return parts.map((part, index) => {
+      if (index % 2 === 1) {
+        return <strong key={index} className="font-bold text-primary">{part}</strong>;
+      }
+      return part;
+    });
+  };
+
   const formatAIResponse = (text: string) => {
     return text.split('\n').map((line, index) => {
-      const match = line.match(/^([A-Za-z\s]+:)(.*)/);
-      if (match) return <p key={index} className="mb-2"><strong className="text-primary font-bold">{match[1]}</strong>{match[2]}</p>;
-      return <p key={index} className="mb-2">{line}</p>;
+      const trimmed = line.trim();
+      
+      // 1. Horizontal Rule (e.g. ---)
+      if (trimmed === "---") {
+        return <hr key={index} className="my-4 border-white/10" />;
+      }
+      
+      // 2. Unordered Lists (e.g. * item, - item)
+      const listMatch = line.match(/^(\s*[*+-]\s+)(.*)/);
+      if (listMatch) {
+        return (
+          <li key={index} className="ml-6 list-disc mb-2 text-foreground/90 leading-relaxed">
+            {parseInlineMarkdown(listMatch[2])}
+          </li>
+        );
+      }
+      
+      // 3. Numbered lists (e.g. 1. item)
+      const numListMatch = line.match(/^(\s*\d+\.\s+)(.*)/);
+      if (numListMatch) {
+        return (
+          <p key={index} className="ml-6 pl-1 mb-2 leading-relaxed text-foreground/90">
+            <strong className="text-primary mr-1 font-bold">{numListMatch[1]}</strong>
+            {parseInlineMarkdown(numListMatch[2])}
+          </p>
+        );
+      }
+
+      // 4. Standalone Bold Headings like **Scenario:** or **Question:**
+      const boldHeaderMatch = trimmed.match(/^\*\*(.*?)\*\*$/);
+      if (boldHeaderMatch) {
+        return (
+          <h4 key={index} className="text-primary font-bold font-serif text-sm tracking-wider uppercase mt-4 mb-2">
+            {boldHeaderMatch[1]}
+          </h4>
+        );
+      }
+
+      // 5. Section headers with colon e.g. "Scenario:"
+      const colonMatch = line.match(/^([A-Za-z\s]+:)(.*)/);
+      if (colonMatch) {
+        return (
+          <p key={index} className="mb-2 leading-relaxed">
+            <strong className="text-primary font-bold">{colonMatch[1]}</strong>
+            {parseInlineMarkdown(colonMatch[2])}
+          </p>
+        );
+      }
+
+      // 6. Regular Line with potential inline bold text
+      return (
+        <p key={index} className="mb-2 leading-relaxed">
+          {parseInlineMarkdown(line)}
+        </p>
+      );
     });
   };
 
