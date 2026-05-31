@@ -47,6 +47,7 @@ const Interview = () => {
   // --- Voice Feedback State & Helpers ---
   const [voiceEnabled, setVoiceEnabled] = useState(() => localStorage.getItem("mockmate-voice-enabled") === "true");
   const activeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const isMountedRef = useRef(true);
   const [sessionSaved, setSessionSaved] = useState(false);
 
   // --- AI Reactive Avatar State & Audio Wave ---
@@ -160,6 +161,9 @@ const Interview = () => {
         responseType: 'blob'
       });
 
+      // Guard: If the component has unmounted during the async fetch, do NOT continue playing!
+      if (!isMountedRef.current) return;
+
       // Guard against race conditions: check if voice was disabled or interrupted during the fetch
       if (!force) {
         const isVoiceCurrentlyEnabledPostFetch = localStorage.getItem("mockmate-voice-enabled") === "true";
@@ -195,6 +199,12 @@ const Interview = () => {
   };
 
   const handleOpenReport = async () => {
+    if (activeAudioRef.current) {
+      activeAudioRef.current.pause();
+      activeAudioRef.current = null;
+    }
+    setIsSpeaking(false);
+    setCurrentlyPlayingText(null);
     setShowReport(true);
     // Only save if there is actual history (at least 1 question graded) and not already saved
     if (sessionHistory.length > 0 && !sessionSaved) {
@@ -221,7 +231,9 @@ const Interview = () => {
       });
   }, []);
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
+      isMountedRef.current = false;
       if (timerRef.current) clearTimeout(timerRef.current);
       if (abortControllerRef.current) abortControllerRef.current.abort();
       if (recognizerRef.current) {
@@ -586,7 +598,20 @@ const stopRecording = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                     <button onClick={() => window.location.reload()} className="p-4 rounded-2xl bg-white/5 border border-white/10 text-xs font-bold uppercase tracking-widest">Reset</button>
-                    <button onClick={() => navigate("/")} className="p-4 rounded-2xl bg-primary text-primary-foreground text-xs font-bold uppercase tracking-widest">Exit</button>
+                    <button 
+                      onClick={() => {
+                        if (activeAudioRef.current) {
+                          activeAudioRef.current.pause();
+                          activeAudioRef.current = null;
+                        }
+                        setIsSpeaking(false);
+                        setCurrentlyPlayingText(null);
+                        navigate("/");
+                      }} 
+                      className="p-4 rounded-2xl bg-primary text-primary-foreground text-xs font-bold uppercase tracking-widest"
+                    >
+                      Exit
+                    </button>
                 </div>
             </div>
         </div>
