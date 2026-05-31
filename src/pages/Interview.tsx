@@ -52,6 +52,7 @@ const Interview = () => {
   // --- AI Reactive Avatar State & Audio Wave ---
   const [avatarState, setAvatarState] = useState<"IDLE" | "LISTENING" | "THINKING" | "SPEAKING">("IDLE");
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [currentlyPlayingText, setCurrentlyPlayingText] = useState<string | null>(null);
   
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -128,12 +129,26 @@ const Interview = () => {
   };
 
   const playSpeech = async (text: string, force = false) => {
-    if (!voiceEnabled && !force) return;
+    // If the EXACT same text is currently playing, clicking it should toggle it OFF/Stop it!
+    if (activeAudioRef.current && currentlyPlayingText === text) {
+      activeAudioRef.current.pause();
+      activeAudioRef.current = null;
+      setCurrentlyPlayingText(null);
+      setIsSpeaking(false);
+      return;
+    }
+
+    if (!force) {
+      const isVoiceCurrentlyEnabled = localStorage.getItem("mockmate-voice-enabled") === "true";
+      if (!isVoiceCurrentlyEnabled) return;
+    }
+
     try {
       // Interrupt any current audio playback to avoid voice overlap
       if (activeAudioRef.current) {
         activeAudioRef.current.pause();
         activeAudioRef.current = null;
+        setCurrentlyPlayingText(null);
         setIsSpeaking(false);
       }
 
@@ -145,19 +160,37 @@ const Interview = () => {
         responseType: 'blob'
       });
 
+      // Guard against race conditions: check if voice was disabled or interrupted during the fetch
+      if (!force) {
+        const isVoiceCurrentlyEnabledPostFetch = localStorage.getItem("mockmate-voice-enabled") === "true";
+        if (!isVoiceCurrentlyEnabledPostFetch) return;
+      }
+
       const blobUrl = URL.createObjectURL(response.data);
       const audio = new Audio(blobUrl);
       activeAudioRef.current = audio;
-      audio.onplay = () => setIsSpeaking(true);
-      audio.onended = () => setIsSpeaking(false);
-      audio.onpause = () => setIsSpeaking(false);
+      
+      audio.onplay = () => {
+        setIsSpeaking(true);
+        setCurrentlyPlayingText(text);
+      };
+      audio.onended = () => {
+        setIsSpeaking(false);
+        setCurrentlyPlayingText(null);
+      };
+      audio.onpause = () => {
+        setIsSpeaking(false);
+        setCurrentlyPlayingText(null);
+      };
       audio.play().catch(e => {
         console.warn("Autoplay blocked or playback interrupted:", e);
         setIsSpeaking(false);
+        setCurrentlyPlayingText(null);
       });
     } catch (error) {
       console.error("Failed to play speech:", error);
       setIsSpeaking(false);
+      setCurrentlyPlayingText(null);
     }
   };
 
@@ -194,6 +227,10 @@ const Interview = () => {
       if (recognizerRef.current) {
         recognizerRef.current.stopContinuousRecognitionAsync();
         recognizerRef.current.close();
+      }
+      if (activeAudioRef.current) {
+        activeAudioRef.current.pause();
+        activeAudioRef.current = null;
       }
     };
   }, []);
@@ -462,6 +499,24 @@ const stopRecording = () => {
       if (trimmed === "---") {
         return <hr key={index} className="my-4 border-white/10" />;
       }
+
+      // 1b. Markdown Headers (e.g. # Header, ## Header, ### Header)
+      const headerMatch = line.match(/^(\s*#{1,6}\s+)(.*)/);
+      if (headerMatch) {
+        const level = headerMatch[1].trim().length;
+        const headerText = headerMatch[2];
+        const parsedText = parseInlineMarkdown(headerText);
+        
+        if (level === 1) {
+          return <h1 key={index} className="text-primary font-bold font-serif text-lg tracking-wider uppercase mt-4 mb-2">{parsedText}</h1>;
+        } else if (level === 2) {
+          return <h2 key={index} className="text-primary font-bold font-serif text-md tracking-wider uppercase mt-4 mb-2">{parsedText}</h2>;
+        } else if (level === 3) {
+          return <h3 key={index} className="text-primary font-bold font-serif text-sm tracking-wide uppercase mt-3 mb-1.5">{parsedText}</h3>;
+        } else {
+          return <h4 key={index} className="text-primary font-bold font-serif text-xs tracking-wider uppercase mt-3 mb-1">{parsedText}</h4>;
+        }
+      }
       
       // 2. Unordered Lists (e.g. * item, - item)
       const listMatch = line.match(/^(\s*[*+-]\s+)(.*)/);
@@ -589,12 +644,12 @@ const stopRecording = () => {
           <button 
             onClick={() => {
               const nextVal = !voiceEnabled;
-              if (voiceEnabled) {
-                if (activeAudioRef.current) {
-                  activeAudioRef.current.pause();
-                  activeAudioRef.current = null;
-                }
+              if (activeAudioRef.current) {
+                activeAudioRef.current.pause();
+                activeAudioRef.current = null;
               }
+              setIsSpeaking(false);
+              setCurrentlyPlayingText(null);
               setVoiceEnabled(nextVal);
               localStorage.setItem("mockmate-voice-enabled", String(nextVal));
             }} 
@@ -679,10 +734,13 @@ const stopRecording = () => {
                 {msg.type === "ai" && (
                   <button 
                     onClick={() => playSpeech(msg.content, true)}
-                    className="p-2 opacity-0 group-hover/bubble:opacity-100 hover:text-primary hover:bg-white/5 transition-all duration-300 text-muted-foreground self-center shrink-0 rounded-full"
-                    title="Read Out Loud"
+                    className={`p-2 transition-all duration-300 text-muted-foreground self-center shrink-0 rounded-full hover:text-primary hover:bg-white/5
+                      ${currentlyPlayingText === msg.content 
+                        ? "opacity-100 text-yellow-500 bg-white/5 animate-pulse" 
+                        : "opacity-0 group-hover/bubble:opacity-100"}`}
+                    title={currentlyPlayingText === msg.content ? "Stop Reading" : "Read Out Loud"}
                   >
-                    <Volume2 size={14} />
+                    {currentlyPlayingText === msg.content ? <Square size={14} fill="currentColor" /> : <Volume2 size={14} />}
                   </button>
                 )}
               </div>
