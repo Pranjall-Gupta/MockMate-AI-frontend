@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import Editor from "@monaco-editor/react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Timer, Send, ArrowRight, Code2, Loader2, Sparkles, ChevronDown, Lightbulb, Lock ,Cpu,Layers,XIcon} from "lucide-react";
+import { Timer, Send, ArrowRight, Code2, Loader2, Sparkles, ChevronDown, Lightbulb, Lock, Cpu, Layers, XIcon } from "lucide-react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import { Link } from "react-router-dom";
 import api from "@/lib/api";
 const CodeArena = () => {
   const [question, setQuestion] = useState<any>(null);
